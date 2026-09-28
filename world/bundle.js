@@ -31437,7 +31437,7 @@
     }
   };
 
-  // ri-world/js/chapters.js
+  // world/js/chapters.js
   var CHAPTERS = [
     {
       id: "z1",
@@ -31490,7 +31490,7 @@
     }
   ];
 
-  // ri-world/js/hud.js
+  // world/js/hud.js
   var Hud = class {
     constructor(callbacks = {}) {
       this.cb = callbacks;
@@ -31696,7 +31696,7 @@
     }
   };
 
-  // ri-world/js/util.js
+  // world/js/util.js
   function makeRng(seed = 1) {
     let s = seed >>> 0;
     return function() {
@@ -32095,7 +32095,7 @@
     return new Points(g, m);
   }
 
-  // ri-world/js/rig.js
+  // world/js/rig.js
   var CameraRig = class {
     constructor(camera2, dom) {
       this.cam = camera2;
@@ -32198,7 +32198,7 @@
     }
   };
 
-  // ri-world/js/audio.js
+  // world/js/audio.js
   var AudioEngine = class {
     constructor() {
       this.ready = false;
@@ -32580,7 +32580,7 @@
     }
   };
 
-  // ri-world/js/sky.js
+  // world/js/sky.js
   var SKY_VERT = (
     /* glsl */
     `
@@ -32726,7 +32726,7 @@
     return group;
   }
 
-  // ri-world/js/fx.js
+  // world/js/fx.js
   function createRain({ count = 2600, area: area2 = 70, height = 40, color = 10467536, opacity = 0.5, len = 0.55, wind = 0.6 } = {}) {
     const geo = new BufferGeometry();
     const pos = new Float32Array(count * 2 * 3);
@@ -33183,7 +33183,7 @@
     return m;
   }
 
-  // ri-world/js/figures.js
+  // world/js/figures.js
   var MAT = (color, o = {}) => new MeshStandardMaterial({
     color,
     roughness: o.rough ?? 0.82,
@@ -33857,7 +33857,7 @@
     c.position.y += Math.sin(t * 1.7) * 4e-3;
   }
 
-  // ri-world/js/zones/common.js
+  // world/js/zones/common.js
   function makeStiltHouse({ w: w5 = 4.4, d = 3.6, stiltH = 1.6, bamboo = false, seed = 0 } = {}) {
     const g = new Group();
     const wallTex = bamboo ? TEX.bamboo : TEX.wood;
@@ -34181,7 +34181,7 @@
     return g;
   }
 
-  // ri-world/js/zones/z1.js
+  // world/js/zones/z1.js
   var SUMMIT_H = (x, z) => {
     const r = Math.hypot(x, z);
     const plateau = 1 - smooth01((r - 15) / 14);
@@ -34692,7 +34692,7 @@
     }
   };
 
-  // ri-world/js/water.js
+  // world/js/water.js
   var FLOW_FRAG = (
     /* glsl */
     `
@@ -34786,7 +34786,7 @@
     return mesh;
   }
 
-  // ri-world/js/zones/z2.js
+  // world/js/zones/z2.js
   var C = [0, 0, 2400];
   var w = (p, l, fov2) => ({ pos: [p[0] + C[0], p[1] + C[1], p[2] + C[2]], look: [l[0] + C[0], l[1] + C[1], l[2] + C[2]], fov: fov2 });
   var W = (p) => [p[0] + C[0], p[1] + C[1], p[2] + C[2]];
@@ -35218,7 +35218,7 @@
     return a + (b - a) * t;
   }
 
-  // ri-world/js/zones/z3.js
+  // world/js/zones/z3.js
   var C2 = [2400, 0, 0];
   var w2 = (p, l, fov2) => ({ pos: [p[0] + C2[0], p[1] + C2[1], p[2] + C2[2]], look: [l[0] + C2[0], l[1] + C2[1], l[2] + C2[2]], fov: fov2 });
   var W2 = (p) => [p[0] + C2[0], p[1] + C2[1], p[2] + C2[2]];
@@ -35685,7 +35685,7 @@
     return g;
   }
 
-  // ri-world/js/zones/z4.js
+  // world/js/zones/z4.js
   var C3 = [0, 0, -2400];
   var w3 = (p, l, fov2) => ({ pos: [p[0] + C3[0], p[1] + C3[1], p[2] + C3[2]], look: [l[0] + C3[0], l[1] + C3[1], l[2] + C3[2]], fov: fov2 });
   var W3 = (p) => [p[0] + C3[0], p[1] + C3[1], p[2] + C3[2]];
@@ -36270,7 +36270,7 @@
     }
   };
 
-  // ri-world/js/zones/z5.js
+  // world/js/zones/z5.js
   var C4 = [2400, 0, 2400];
   var w4 = (p, l, fov2) => ({ pos: [p[0] + C4[0], p[1] + C4[1], p[2] + C4[2]], look: [l[0] + C4[0], l[1] + C4[1], l[2] + C4[2]], fov: fov2 });
   var W4 = (p) => [p[0] + C4[0], p[1] + C4[1], p[2] + C4[2]];
@@ -36931,7 +36931,7 @@
     }
   };
 
-  // ri-world/js/main.js
+  // world/js/main.js
   var ENV_BASE = {
     top: 660520,
     mid: 5517898,
