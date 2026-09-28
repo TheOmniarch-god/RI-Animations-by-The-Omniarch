@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RI Characters — viewer</title>
+<style>
+  :root { --bg:#121014; --panel:#1c1820; --line:#3a3038; --ink:#e8e0d0; --dim:#9a8f96; --gold:#d8b25a; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink); font-family:Georgia,'Noto Serif CJK SC',serif; overflow:hidden; }
+  #top { display:flex; align-items:baseline; gap:14px; padding:12px 18px; border-bottom:1px solid var(--line); }
+  #top h1 { font-size:16px; margin:0; letter-spacing:.12em; color:var(--gold); font-weight:normal; }
+  #top span { font-size:11px; color:var(--dim); }
+  #wrap { display:flex; height:calc(100% - 49px); }
+  #list { width:220px; overflow-y:auto; border-right:1px solid var(--line); background:var(--panel); }
+  .row { padding:10px 14px; border-bottom:1px solid #2a242c; cursor:pointer; font-size:13px; }
+  .row:hover { background:#241f28; }
+  .row.on { background:#2b2430; border-left:3px solid var(--gold); padding-left:11px; }
+  .row b { display:block; font-weight:normal; color:var(--ink); }
+  .row i { font-style:normal; font-size:10px; color:var(--dim); display:block; margin-top:2px; }
+  #stage { flex:1; position:relative; }
+  #stage canvas { display:block; width:100%; height:100%; }
+  #info { position:absolute; left:14px; bottom:12px; max-width:70%; font-size:12px; color:var(--dim); background:rgba(18,16,20,.72); padding:8px 12px; border:1px solid var(--line); border-radius:6px; line-height:1.5; }
+  #info b { color:var(--gold); font-weight:normal; letter-spacing:.06em; }
+  #hint { position:absolute; right:14px; bottom:12px; font-size:10px; color:#6a616a; }
+</style>
+</head>
+<body>
+<div id="top"><h1>REVEREND INSANITY · CHARACTER ARCHIVE</h1><span>Vol.1 · Ch1–5 · GLB assets</span></div>
+<div id="wrap">
+  <div id="list"></div>
+  <div id="stage">
+    <div id="info"></div>
+    <div id="hint">drag to orbit · wheel to zoom · dblclick to reset</div>
+  </div>
+</div>
+<script type="importmap">
+{ "imports": {
+  "three": "./three/three.module.js",
+  "three/addons/": "./jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from './jsm/loaders/GLTFLoader.js';
+
+const stage = document.getElementById('stage');
+const list = document.getElementById('list');
+const info = document.getElementById('info');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+stage.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x100e12);
+scene.fog = new THREE.Fog(0x100e12, 6, 18);
+const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 60);
+scene.add(new THREE.HemisphereLight(0xffe6c8, 0x352a33, 1.15));
+const key = new THREE.DirectionalLight(0xfff0dd, 1.5); key.position.set(2.5, 4, 3); scene.add(key);
+const rim = new THREE.DirectionalLight(0x8899ff, 0.55); rim.position.set(-2.5, 3, -3); scene.add(rim);
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(3, 48),
+  new THREE.MeshStandardMaterial({ color: 0x1a171c, rough: 0.95 })
+);
+ground.rotation.x = -Math.PI / 2; scene.add(ground);
+
+/* orbit */
+let yaw = 0.6, pitch = 0.12, dist = 2.4, tx = 0, ty = 0.9, tz = 0, cur = null;
+const el = renderer.domElement;
+let drag = null;
+el.addEventListener('pointerdown', e => drag = { x: e.clientX, y: e.clientY });
+addEventListener('pointerup', () => drag = null);
+el.addEventListener('pointermove', e => {
+  if (!drag) return;
+  yaw -= (e.clientX - drag.x) * 0.005;
+  pitch = Math.max(-1.2, Math.min(1.2, pitch + (e.clientY - drag.y) * 0.005));
+  drag = { x: e.clientX, y: e.clientY };
+});
+el.addEventListener('wheel', e => { e.preventDefault(); dist = Math.max(0.35, Math.min(8, dist * (1 + e.deltaY * 0.001))); }, { passive: false });
+el.addEventListener('dblclick', () => { yaw = 0.6; pitch = 0.12; dist = 2.4; });
+
+const loader = new GLTFLoader();
+async function loadCharacter(id) {
+  const g = await loader.loadAsync(`characters/${id}.glb`);
+  if (cur) { scene.remove(cur.scene); cur.scene.traverse(o => { if (o.isMesh) { o.geometry.dispose(); } }); }
+  cur = g;
+  scene.add(g.scene);
+  const box = new THREE.Box3().setFromObject(g.scene);
+  const c = box.getCenter(new THREE.Vector3());
+  const h = box.max.y - box.min.y || 1;
+  tx = c.x; tz = c.z; ty = box.min.y + h * 0.48;
+  dist = Math.max(1.1, h * 1.7);
+}
+function resize() {
+  const w = stage.clientWidth, hgt = stage.clientHeight;
+  renderer.setSize(w, hgt, false);
+  camera.aspect = w / hgt; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+
+async function main() {
+  const meta = await (await fetch('characters/recipes.json')).json();
+  let first = true;
+  for (const m of meta) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `<b>${m.title}</b><i>${m.chapter}</i>`;
+    row.addEventListener('click', () => {
+      document.querySelectorAll('.row').forEach(r => r.classList.remove('on'));
+      row.classList.add('on');
+      info.innerHTML = `<b>${m.title}</b> · ${m.chapter}<br>${m.desc}`;
+      loadCharacter(m.id);
+    });
+    list.appendChild(row);
+    if (first) { row.click(); first = false; }
+  }
+  resize();
+  (function loop() {
+    requestAnimationFrame(loop);
+    if (cur) {
+      cur.scene.rotation.y += 0.006;
+      const s = new THREE.Spherical(dist, Math.max(0.08, Math.PI / 2 - pitch), yaw);
+      const off = new THREE.Vector3().setFromSpherical(s);
+      camera.position.set(tx + off.x, ty + off.y, tz + off.z);
+      camera.lookAt(tx, ty, tz);
+    }
+    renderer.render(scene, camera);
+  })();
+}
+main().catch(e => { info.innerHTML = '<b>error</b> ' + e.message; console.error(e); });
+</script>
+</body>
+</html>

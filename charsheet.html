@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>RI — character sheet / GLB export (self-contained)</title>
+<script type="importmap">
+{ "imports": {
+    "three": "./three/three.module.js",
+    "three/addons/": "./jsm/"
+} }
+</script>
+<style>
+  body { background:#141116; color:#e8e0d0; font-family:Georgia,serif; margin:0; }
+  header { padding:18px 26px; border-bottom:1px solid #3a3038; }
+  h1 { margin:0; font-size:20px; letter-spacing:.08em; color:#d8b25a; }
+  #grid { display:flex; flex-wrap:wrap; gap:14px; padding:22px 26px; }
+  .card { width:168px; background:#1d1920; border:1px solid #3a3038; border-radius:8px; padding:10px; text-align:center; }
+  .card canvas { width:146px; height:190px; border-radius:4px; background:#0e0c10; }
+  .card b { display:block; margin-top:8px; font-size:12px; color:#e8e0d0; word-break:break-all; }
+  .card span { font-size:10px; color:#9a8f96; }
+  button { margin-top:6px; font-size:11px; background:#3a2f24; color:#e8d9b0; border:1px solid #6a5a3a; border-radius:4px; padding:3px 8px; cursor:pointer; }
+  #status { padding:0 26px 20px; font-size:13px; color:#9a8f96; }
+</style>
+</head>
+<body>
+<header><h1>REVEREND INSANITY — CHARACTER SHEET &amp; GLB EXPORTER</h1></header>
+<div id="grid"></div>
+<div id="status">booting…</div>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFExporter } from './jsm/exporters/GLTFExporter.js';
+import {
+  makeFangYuan, makeFangZheng, makeElder, makeMaid,
+  makeHero, makeCrowdFigure, makePredicament, makeCicada,
+} from './figures/figures.js';
+
+const DEFS = [
+  { id: 'fang_yuan',    title: 'Fang Yuan',           chapter: 'Ch1–4', make: () => makeFangYuan(),
+    desc: 'Protagonist, ~15, wild black hair, tattered emerald robe (Demon Fang Yuan)' },
+  { id: 'fang_zheng',   title: 'Fang Zheng',          chapter: 'Ch2',   make: () => makeFangZheng(),
+    desc: 'Twin brother, grey-blue robe, topknot, earnest face' },
+  { id: 'shen_cui',     title: 'Shen Cui',            chapter: 'Ch3',   make: () => makeMaid(),
+    desc: 'Maidservant, green tunic, pearl hairpin' },
+  { id: 'gu_yue_elder', title: 'Gu Yue Elder',        chapter: 'Ch1–4', make: () => makeElder(),
+    desc: 'Clan elder, pale robe, crimson trim, scholar hat' },
+  { id: 'elder_chi_lian', title: 'Elder Chi Lian',    chapter: 'Ch4',   make: () => makeElder(0xdcd6c6, 0x7a2a22),
+    desc: 'Rigging elder of the trials, weathered variant' },
+  { id: 'gu_yue_hero_1', title: 'Gu Yue Genius I',    chapter: 'Ch4',   make: () => makeHero(0),
+    desc: 'Trial candidate variant 1' },
+  { id: 'gu_yue_hero_2', title: 'Gu Yue Genius II',   chapter: 'Ch4',   make: () => makeHero(1),
+    desc: 'Trial candidate variant 2' },
+  { id: 'gu_yue_hero_3', title: 'Gu Yue Genius III',  chapter: 'Ch4',   make: () => makeHero(2),
+    desc: 'Trial candidate variant 3' },
+  { id: 'villager_1',   title: 'Clan Villager I',     chapter: 'Ch1',   make: () => makeCrowdFigure(0x5a3a3a),
+    desc: 'Gathered host, seeded random face A' },
+  { id: 'villager_2',   title: 'Clan Villager II',    chapter: 'Ch1',   make: () => makeCrowdFigure(0x3a4a5a),
+    desc: 'Gathered host, seeded random face B' },
+  { id: 'villager_3',   title: 'Clan Villager III',   chapter: 'Ch1',   make: () => makeCrowdFigure(0x555060),
+    desc: 'Gathered host, seeded random face C' },
+  { id: 'predicament',  title: 'Predicament Beast',   chapter: 'Ch5',   make: () => makePredicament(1),
+    desc: 'Spined shadow-beast from Ren Zu’s parable' },
+  { id: 'spring_autumn_cicada', title: 'Spring Autumn Cicada', chapter: 'Ch2', make: () => makeCicada(),
+    desc: 'Time-travel Gu, rebirth artifact' },
+];
+
+const exporter = new GLTFExporter();
+function exportGLB(def) {
+  return new Promise((resolve, reject) => {
+    const m = def.make();
+    const obj = m && m.group ? m.group : m;
+    exporter.parse(obj, (buf) => {
+      const blob = new Blob([new Uint8Array(buf)], { type: 'model/gltf-binary' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = def.id + '.glb';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      resolve();
+    }, (e) => reject(e || new Error('export failed')), { binary: true, onlyVisible: true });
+  });
+}
+
+const grid = document.getElementById('grid');
+const status = document.getElementById('status');
+const renderers = [];
+for (const def of DEFS) {
+  const card = document.createElement('div'); card.className = 'card';
+  const c = document.createElement('canvas'); c.width = 292; c.height = 380;
+  const b = document.createElement('b'); b.textContent = def.title;
+  const sp = document.createElement('span'); sp.textContent = def.chapter;
+  const btn = document.createElement('button'); btn.textContent = '⬇ .glb';
+  btn.addEventListener('click', () => exportGLB(def).then(() => { btn.textContent = 'saved ✓'; }));
+  card.append(c, b, sp, btn); grid.append(card);
+  const r = new THREE.WebGLRenderer({ canvas: c, antialias: true, alpha: false });
+  r.setSize(292, 380, false);
+  const sc = new THREE.Scene(); sc.background = new THREE.Color(0x0e0c10);
+  const cam = new THREE.PerspectiveCamera(34, 292 / 380, 0.05, 40);
+  const m = def.make();
+  const fig = m && m.group ? m.group : m;
+  sc.add(fig);
+  const box = new THREE.Box3().setFromObject(fig);
+  const h = box.max.y - box.min.y;
+  const dist = Math.max(h * 1.9, 1.4);
+  cam.position.set(0, box.min.y + h * 0.55, dist);
+  cam.lookAt(0, box.min.y + h * 0.5, 0);
+  sc.add(new THREE.HemisphereLight(0xffe6c8, 0x352a33, 1.25));
+  const key = new THREE.DirectionalLight(0xfff0dd, 1.4); key.position.set(2.5, 4, 3); sc.add(key);
+  const rim = new THREE.DirectionalLight(0x8899ff, 0.5); rim.position.set(-2, 3, -3); sc.add(rim);
+  renderers.push({ r, sc, cam, fig });
+}
+let t0 = performance.now();
+(function loop() {
+  const t = (performance.now() - t0) / 1000;
+  for (const it of renderers) it.fig.rotation.y = t * 0.5;
+  for (const it of renderers) it.r.render(it.sc, it.cam);
+  requestAnimationFrame(loop);
+})();
+status.textContent = 'ready — ' + DEFS.length + ' characters · click ⬇ to download each .glb';
+</script>
+</body>
+</html>

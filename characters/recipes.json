@@ -1,0 +1,106 @@
+[
+  {
+    "file": "fang_yuan.glb",
+    "id": "fang_yuan",
+    "title": "Fang Yuan",
+    "chapter": "Ch1–4",
+    "desc": "Protagonist, ~15, wild black hair, tattered emerald robe (Demon Fang Yuan)",
+    "bytes": 194008
+  },
+  {
+    "file": "fang_zheng.glb",
+    "id": "fang_zheng",
+    "title": "Fang Zheng",
+    "chapter": "Ch2",
+    "desc": "Twin brother, grey-blue robe, topknot, earnest face",
+    "bytes": 98976
+  },
+  {
+    "file": "shen_cui.glb",
+    "id": "shen_cui",
+    "title": "Shen Cui",
+    "chapter": "Ch3",
+    "desc": "Maidservant, green tunic, pearl hairpin",
+    "bytes": 104412
+  },
+  {
+    "file": "gu_yue_elder.glb",
+    "id": "gu_yue_elder",
+    "title": "Gu Yue Elder",
+    "chapter": "Ch1–4",
+    "desc": "Clan elder, pale robe, crimson trim, scholar hat",
+    "bytes": 105596
+  },
+  {
+    "file": "elder_chi_lian.glb",
+    "id": "elder_chi_lian",
+    "title": "Elder Chi Lian",
+    "chapter": "Ch4",
+    "desc": "Rigging elder of the trials, weathered variant",
+    "bytes": 105092
+  },
+  {
+    "file": "gu_yue_hero_1.glb",
+    "id": "gu_yue_hero_1",
+    "title": "Gu Yue Genius I",
+    "chapter": "Ch4",
+    "desc": "Trial candidate variant 1",
+    "bytes": 114840
+  },
+  {
+    "file": "gu_yue_hero_2.glb",
+    "id": "gu_yue_hero_2",
+    "title": "Gu Yue Genius II",
+    "chapter": "Ch4",
+    "desc": "Trial candidate variant 2",
+    "bytes": 103264
+  },
+  {
+    "file": "gu_yue_hero_3.glb",
+    "id": "gu_yue_hero_3",
+    "title": "Gu Yue Genius III",
+    "chapter": "Ch4",
+    "desc": "Trial candidate variant 3",
+    "bytes": 98468
+  },
+  {
+    "file": "villager_1.glb",
+    "id": "villager_1",
+    "title": "Clan Villager I",
+    "chapter": "Ch1",
+    "desc": "Gathered host, seeded random face A",
+    "bytes": 10700
+  },
+  {
+    "file": "villager_2.glb",
+    "id": "villager_2",
+    "title": "Clan Villager II",
+    "chapter": "Ch1",
+    "desc": "Gathered host, seeded random face B",
+    "bytes": 10700
+  },
+  {
+    "file": "villager_3.glb",
+    "id": "villager_3",
+    "title": "Clan Villager III",
+    "chapter": "Ch1",
+    "desc": "Gathered host, seeded random face C",
+    "bytes": 10700
+  },
+  {
+    "file": "predicament.glb",
+    "id": "predicament",
+    "title": "Predicament Beast",
+    "chapter": "Ch5",
+    "desc": "Spined shadow-beast from Ren Zu’s parable",
+    "bytes": 47496
+  },
+  {
+    "file": "spring_autumn_cicada.glb",
+    "id": "spring_autumn_cicada",
+    "title": "Spring Autumn Cicada",
+    "chapter": "Ch2",
+    "desc": "Time-travel Gu, rebirth artifact",
+    "bytes": 83532
+  }
+]
