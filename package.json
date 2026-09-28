@@ -13,5 +13,8 @@
     "esbuild": "^0.28.2",
     "puppeteer": "^24.43.1",
     "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "@gltf-transform/cli": "^4.5.0"
   }
 }

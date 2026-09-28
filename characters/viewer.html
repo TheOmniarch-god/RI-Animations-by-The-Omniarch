@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>RI Character Viewer</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1a1a1f; }
+  #label {
+    position: fixed; left: 16px; bottom: 14px; color: #d8d3c8;
+    font: 600 13px/1.4 Georgia, serif; letter-spacing: .06em;
+    background: rgba(0,0,0,.45); padding: 6px 10px; border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+<div id="label"></div>
+<script type="importmap">
+{ "imports": { "three": "../lib/three/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from '../lib/three/three.module.js';
+import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from '../lib/jsm/loaders/DRACOLoader.js';
+
+const params = new URLSearchParams(location.search);
+const id = params.get('m') || 'fang_yuan';
+const label = document.getElementById('label');
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x2a2a30);
+scene.fog = new THREE.Fog(0x2a2a30, 6, 12);
+
+const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.05, 60);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+document.body.appendChild(renderer.domElement);
+
+// --- studio lighting (key / fill / rim) ---
+scene.add(new THREE.HemisphereLight(0xfff4e0, 0x202028, 0.55));
+const key = new THREE.DirectionalLight(0xffffff, 2.1);
+key.position.set(2.4, 3.4, 2.8);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.camera.left = key.shadow.camera.bottom = -2;
+key.shadow.camera.right = key.shadow.camera.top = 2;
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xbfd4ff, 0.5);
+fill.position.set(-3, 1.6, 1.5);
+scene.add(fill);
+const rim = new THREE.DirectionalLight(0xffd9a0, 0.9);
+rim.position.set(-1.2, 2.6, -3);
+scene.add(rim);
+
+// ground with contact shadow
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(3.2, 64),
+  new THREE.ShadowMaterial({ opacity: 0.35 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+const disc = new THREE.Mesh(
+  new THREE.CircleGeometry(0.85, 64),
+  new THREE.MeshStandardMaterial({ color: 0x3a3a42, roughness: 0.9, metalness: 0 })
+);
+disc.rotation.x = -Math.PI / 2;
+disc.position.y = 0.002;
+disc.receiveShadow = true;
+scene.add(disc);
+
+// --- load the GLB ---
+const draco = new DRACOLoader().setDecoderPath('../lib/draco/');
+const loader = new GLTFLoader().setDRACOLoader(draco);
+loader.load(id + '.glb', (gltf) => {
+  const root = gltf.scene;
+  root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  const box = new THREE.Box3().setFromObject(root);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const h = size.y || 1;
+  const s = 2.0 / h;                 // normalize to 2 m tall
+  root.scale.setScalar(s);
+  root.position.set(-center.x * s, -box.min.y * s, -center.z * s);
+  scene.add(root);
+
+  const anims = gltf.animations || [];
+  let mixer = null, action = null;
+  if (anims.length) {
+    mixer = new THREE.AnimationMixer(root);
+    const idle =
+      anims.find(a => /idle|stand|breath/i.test(a.name)) ||
+      anims.find(a => /walk|run|run|death/i.test(a.name)) || anims[0];
+    action = mixer.clipAction(idle);
+    action.play();
+  }
+  label.textContent = id.replace(/_/g, ' ') + '  ·  ' +
+    Math.round(size.x * 100) + '×' + Math.round(h * 100) + '×' + Math.round(size.z * 100) + ' cm  ·  ' +
+    anims.length + ' anim(s)' + (action ? '  [' + action.clip.name + ']' : '');
+  modelRoot = root;
+  window.__mixer = mixer;
+  window.__loaded = true;
+}, undefined, (e) => { label.textContent = 'LOAD ERROR: ' + (e && e.message || e); });
+
+// --- camera: gentle orbit, drag to look ---
+let theta = 0.5, phi = 1.25, radius = 4.6, dragging = false, px = 0, py = 0;
+addEventListener('pointerdown', e => { dragging = true; window.__dragging = true; px = e.clientX; py = e.clientY; });
+addEventListener('pointerup', () => { dragging = false; window.__dragging = false; });
+addEventListener('pointermove', e => {
+  if (!dragging) return;
+  theta -= (e.clientX - px) * 0.005;
+  phi = Math.min(1.55, Math.max(0.35, phi - (e.clientY - py) * 0.005));
+  px = e.clientX; py = e.clientY;
+});
+addEventListener('wheel', e => { radius = Math.min(9, Math.max(2, radius + e.deltaY * 0.004)); }, { passive: true });
+
+// --- render loop (runs always; model may load any time) ---
+let modelRoot = null;
+renderer.setAnimationLoop((t) => {
+  if (!dragging) theta += 0.0016;
+  camera.position.set(
+    radius * Math.sin(phi) * Math.sin(theta),
+    radius * Math.cos(phi) + 1.0,
+    radius * Math.sin(phi) * Math.cos(theta)
+  );
+  camera.lookAt(0, 1.02, 0);
+  if (modelRoot) {
+    if (window.__mixer) window.__mixer.update(0.016);
+    if (location.search.includes('spin=1') && !dragging) modelRoot.rotation.y = t * 0.0004;
+  }
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>

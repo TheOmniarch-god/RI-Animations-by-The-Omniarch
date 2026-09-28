@@ -13,6 +13,7 @@
 // ============================================================
 import * as THREE from 'three';
 import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from '../lib/jsm/loaders/DRACOLoader.js';
 
 export const CHAR_URLS = {
   fang_yuan: 'characters/fang_yuan.glb',
@@ -24,6 +25,11 @@ export const CHAR_URLS = {
 export class CharStore {
   constructor() {
     this.loader = new GLTFLoader();
+    // Draco support: cast pipeline ships Draco-compressed GLBs (world/lib/draco
+    // hosts the WASM decoder, served same-origin so the offline preview iframe
+    // never needs a CDN).
+    this.draco = new DRACOLoader().setDecoderPath('lib/draco/');
+    this.loader.setDRACOLoader(this.draco);
     this.status = 'idle';           // idle | loading | done
     this.ready = new Map();         // id -> { scene }
     this.swapped = new Map();       // id -> count

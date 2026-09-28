@@ -1,10 +1,35 @@
 # Realistic cast — Tripo3D API + free web playbook
 
-The world app now runs a **GLB-first character pipeline**: it loads
+## Status: ✅ MAIN CAST DELIVERED (2026-09-28, Route A)
+
+All four main characters cast via Tripo3D API v3 (`tripo-cli`), **80 free credits
+total** (20/character, `v3.1-20260211`, PBR standard, auto-size, 400k face cap):
+
+| File | Character | Task | Optimized size |
+|---|---|---|---|
+| `fang_yuan.glb` | Fang Yuan | `9a54e70f` | 1.48 MB |
+| `fang_zheng.glb` | Fang Zheng | `e9b00cc7` | 1.37 MB |
+| `shen_cui.glb` | Shen Cui | `f4430d2c` | 1.43 MB |
+| `gu_yue_elder.glb` | Gu Yue elder | `c0f5c584` | 1.33 MB |
+
+Each GLB is post-processed: textures 2048→1024 (Lanczos) + **Draco mesh
+compression** (raw Tripo export ≈14 MB → ≈1.4 MB). The world's `charassets.js`
+wires three's `DRACOLoader` with the decoder hosted at `world/lib/draco/`
+(same-origin, so the offline preview iframe needs no CDN).
+
+Notes:
+- Free API wallet (600 cr) was visible under platform.tripo3d.ai → Billing and
+  expires **2026-10-12** — anything cast later should be prioritized before then.
+- `tools/cast3.sh` re-casts the remaining three (idempotent — skips landed ids).
+- Studio portraits: `characters/viewer.html?m=<id>` (serve via `world/server.py`).
+
+---
+
+The world app runs a **GLB-first character pipeline**: it loads
 `characters/<id>.glb` at boot and swaps it in-place into every scene instance of
 that character (auto-scaled to the right height, auto-plays an idle animation if
-the GLB has one). **Overwrite the four placeholder files below with your generated
-exports and the realistic characters appear everywhere automatically.**
+the GLB has one). **Drop a generated export under one of these names and the
+character appears everywhere automatically.**
 
 ## Files (exact names — the world watches these)
 

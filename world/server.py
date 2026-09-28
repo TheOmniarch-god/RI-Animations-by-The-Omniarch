@@ -27,6 +27,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def translate_path(self, path):
         # /characters/* → repo root's characters/ (GLB character archive)
+        path = path.split("?", 1)[0].split("#", 1)[0]  # drop query/fragment
         if path == "/characters" or path.startswith("/characters/"):
             rel = path[len("/characters/"):].lstrip("/")
             base = os.path.normpath(os.path.join(REPO_ROOT, "characters"))

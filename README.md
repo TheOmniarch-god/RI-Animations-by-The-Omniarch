@@ -18,7 +18,9 @@ world/                the interactive 3D world (runnable app)
   lib/three/          vendored three.js 0.160.0 core + addons (no CDN)
   server.py           static server with CORS (preview-iframe safe)
   README.md           full app documentation (controls, URL params, music credits)
-characters/           13 export-ready .glb character models + recipes.json
+characters/           13 .glb models + recipes.json — main 4 cast are realistic
+                      Tripo3D PBR (Draco-compressed, 1024px textures); rest are
+                      procedural placeholders. See REALISTIC_CAST.md (status: done)
 viewer.html           interactive GLB character archive (orbit/zoom) — also works on GitHub Pages
 charsheet.html        cast table + in-browser GLB re-exporter (download buttons)
 figures/              canonical procedural generator source (figures.js, util.js)
@@ -32,6 +34,9 @@ tools/                build + verification harnesses (run from repo root):
   blacktest.js        boot black-screen watchdog
   finaltest.js        auto-advance + click-through inside a sandboxed iframe
   iframetest.js       minimal iframe repro
+  charverify.js       cast pipeline proof: 4/4 GLBs load + swap, zone/face shots
+  studiotests.js      studio-lit portrait of each cast GLB (characters/viewer.html)
+  cast3.sh            Tripo API cast of remaining 3 (idempotent, abort-on-error)
 package.json          tool deps: esbuild, puppeteer, three (stub-healed by build.sh)
 ```
 
@@ -64,12 +69,16 @@ Every character has a **seeded, specific face** (randomized once, fixed forever)
 Regenerate any model via `charsheet.html`. Workflow: characters are modelled first,
 then animation is polished **one chapter at a time**, starting with Chapter 1.
 
-> **Realistic characters (in progress):** the world already runs a **GLB-first
-> pipeline** (`world/js/charassets.js`) — it loads the main cast from this
-> `characters/` folder at boot and swaps them in-place into every scene instance
-> (auto-fit, auto-play idle clip). The current GLBs are procedural placeholders;
-> drop **Meshy-generated PBR exports** over the same four filenames and the
-> realistic characters appear everywhere. Playbook with paste-ready prompts:
+> **Realistic characters (✅ delivered):** the world runs a **GLB-first pipeline**
+> (`world/js/charassets.js`) that loads the main cast from this `characters/`
+> folder at boot and swaps them in-place into every scene instance (auto-fit,
+> auto-play idle clip). The four main cast GLBs are now **realistic Tripo3D PBR
+> models** (Draco-compressed, 1024px textures, ~1.4 MB each) — the world's
+> `GLTFLoader` is wired with three's `DRACOLoader` (decoder hosted at
+> `world/lib/draco/`, same-origin so the offline preview iframe needs no CDN).
+> Drop any PBR export (Meshy/Tripo/Luma) over a filename and the character
+> appears everywhere. Studio preview: `characters/viewer.html?m=<id>`.
+> Playbook with paste-ready prompts + cast log:
 > [`characters/REALISTIC_CAST.md`](characters/REALISTIC_CAST.md).
 
 ## Music credits (world/music/)

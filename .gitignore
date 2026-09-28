@@ -4,3 +4,6 @@ node_modules/
 *.log
 nohup.out
 docs/screenshots/
+
+# raw Tripo API cast output (14 MB models); optimized finals live at characters/<id>.glb
+characters/cast/
