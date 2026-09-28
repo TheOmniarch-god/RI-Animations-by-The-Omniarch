@@ -1,4 +1,6 @@
 // screenshot & runtime-error harness
+const fs = require('fs');
+try { fs.mkdirSync('/tmp/ri-shots', { recursive: true }); } catch (e) {}
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 

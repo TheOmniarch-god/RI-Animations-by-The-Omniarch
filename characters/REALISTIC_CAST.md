@@ -1,26 +1,39 @@
 # Realistic cast — Tripo3D API + free web playbook
 
-## Status: ✅ MAIN CAST DELIVERED (2026-09-28, Route A)
+## Status: ✅ MAIN CAST DELIVERED — 2K DETAILED PBR (2026-09-28, Route A)
 
-All four main characters cast via Tripo3D API v3 (`tripo-cli`), **80 free credits
-total** (20/character, `v3.1-20260211`, PBR standard, auto-size, 400k face cap):
+All four main characters cast via Tripo3D API v3 (`tripo-cli`), **2 rounds,
+120 free credits total**:
 
-| File | Character | Task | Optimized size |
-|---|---|---|---|
-| `fang_yuan.glb` | Fang Yuan | `9a54e70f` | 1.48 MB |
-| `fang_zheng.glb` | Fang Zheng | `e9b00cc7` | 1.37 MB |
-| `shen_cui.glb` | Shen Cui | `f4430d2c` | 1.43 MB |
-| `gu_yue_elder.glb` | Gu Yue elder | `c0f5c584` | 1.33 MB |
+- **Round 1** (20 cr each, standard 1K PBR) — superseded.
+- **Round 2** (30 cr each, **detailed 2K PBR**) — the shipped version. Tripo's
+  API top tier is `texture_quality=detailed` (2048px PBR); there is no 4K tier.
+  We ship **full 2K textures, no downscale** + Draco mesh compression.
 
-Each GLB is post-processed: textures 2048→1024 (Lanczos) + **Draco mesh
-compression** (raw Tripo export ≈14 MB → ≈1.4 MB). The world's `charassets.js`
-wires three's `DRACOLoader` with the decoder hosted at `world/lib/draco/`
-(same-origin, so the offline preview iframe needs no CDN).
+| File | Character | Task | 2K web size | Notes |
+|---|---|---|---|---|
+| `fang_yuan.glb` | Fang Yuan | `85a25611` | 2.78 MB | **recast v2**: tall lean 15-yo, cold sharp face, **black** tattered robe w/ bloodstains (was wrongly emerald-green in v1) |
+| `fang_zheng.glb` | Fang Zheng | `7e76e639` | 3.88 MB | gentle twin, topknot, grey-blue robe |
+| `shen_cui.glb` | Shen Cui | `c0417aa6` | 3.03 MB | 16-yo maidservant, gold hairpin, muted green |
+| `gu_yue_elder.glb` | Gu Yue elder | `3010392a` | 2.67 MB | 60-yo, grey beard, ivory+carmine robe |
+
+Post-processing: **Draco mesh compression only — textures stay 2048px**
+(raw Tripo export ≈18 MB → ≈2.7–3.9 MB). `charassets.js` wires three's
+`DRACOLoader`, decoder hosted at `world/lib/draco/` (same-origin, no CDN).
+
+Canon notes (ages/descriptions as written in Ch1–5, keep on recasts):
+- **Fang Yuan** — 15 (reborn body), tall/lean, wild long black hair, cold
+  abyssal eyes, **black/dark tattered hanfu** (NOT green — corrected 2026-09-28).
+- **Fang Zheng** — 15, gentle earnest face, topknot, grey-blue scholar robe.
+- **Shen Cui** — 16, meek maidservant, low bun + gold pearl hairpin, muted green.
+- **Gu Yue elder** — ~60, long grey beard, deep wrinkles, black scholar cap,
+  pale ivory robe w/ crimson trim.
 
 Notes:
-- Free API wallet (600 cr) was visible under platform.tripo3d.ai → Billing and
-  expires **2026-10-12** — anything cast later should be prioritized before then.
-- `tools/cast3.sh` re-casts the remaining three (idempotent — skips landed ids).
+- Free API wallet (600 cr) — 520 left after round 1, 400 after round 2 —
+  expires **2026-10-12** per Billing. Cast anything extra before then.
+- `tools/cast2k.sh` recasts the other three (detailed/2K, stage-in-
+  `/home/user/tmp_cast`, deletes raw exports after each land — workspace lean).
 - Studio portraits: `characters/viewer.html?m=<id>` (serve via `world/server.py`).
 
 ---

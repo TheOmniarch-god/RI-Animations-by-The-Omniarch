@@ -19,7 +19,7 @@ world/                the interactive 3D world (runnable app)
   server.py           static server with CORS (preview-iframe safe)
   README.md           full app documentation (controls, URL params, music credits)
 characters/           13 .glb models + recipes.json — main 4 cast are realistic
-                      Tripo3D PBR (Draco-compressed, 1024px textures); rest are
+                      Tripo3D detailed 2K PBR (Draco, ~2.7–3.9 MB); rest are
                       procedural placeholders. See REALISTIC_CAST.md (status: done)
 viewer.html           interactive GLB character archive (orbit/zoom) — also works on GitHub Pages
 charsheet.html        cast table + in-browser GLB re-exporter (download buttons)
@@ -36,7 +36,7 @@ tools/                build + verification harnesses (run from repo root):
   iframetest.js       minimal iframe repro
   charverify.js       cast pipeline proof: 4/4 GLBs load + swap, zone/face shots
   studiotests.js      studio-lit portrait of each cast GLB (characters/viewer.html)
-  cast3.sh            Tripo API cast of remaining 3 (idempotent, abort-on-error)
+  cast2k.sh           Tripo API cast @ detailed 2K (abort-on-error, stage+cleanup)
 package.json          tool deps: esbuild, puppeteer, three (stub-healed by build.sh)
 ```
 
@@ -56,7 +56,7 @@ Character viewer: serve the repo root (`python3 -m http.server 9000`) →
 
 ## The cast (characters/)
 
-- **Fang Yuan** — protagonist, rendered ~15, wild black hair, tattered emerald robe (Demon Fang Yuan)
+- **Fang Yuan** — protagonist, 15 (reborn body), tall lean, wild black hair, tattered **black** robe w/ bloodstains (Demon Fang Yuan)
 - **Fang Zheng** — twin, grey-blue robe, topknot
 - **Shen Cui** — maidservant, green tunic, pearl hairpin
 - **Gu Yue Elder / Elder Chi Lian** — clan elders, scholar hats
@@ -73,10 +73,10 @@ then animation is polished **one chapter at a time**, starting with Chapter 1.
 > (`world/js/charassets.js`) that loads the main cast from this `characters/`
 > folder at boot and swaps them in-place into every scene instance (auto-fit,
 > auto-play idle clip). The four main cast GLBs are now **realistic Tripo3D PBR
-> models** (Draco-compressed, 1024px textures, ~1.4 MB each) — the world's
+> models** (Draco-compressed, full 2K detailed textures, ~2.7–3.9 MB each) — the world's
 > `GLTFLoader` is wired with three's `DRACOLoader` (decoder hosted at
 > `world/lib/draco/`, same-origin so the offline preview iframe needs no CDN).
-> Drop any PBR export (Meshy/Tripo/Luma) over a filename and the character
+> Fang Yuan wears the **black** tattered robe (canon — not green). Drop any PBR export (Meshy/Tripo/Luma) over a filename and the character
 > appears everywhere. Studio preview: `characters/viewer.html?m=<id>`.
 > Playbook with paste-ready prompts + cast log:
 > [`characters/REALISTIC_CAST.md`](characters/REALISTIC_CAST.md).

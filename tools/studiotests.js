@@ -1,4 +1,6 @@
 // studiotests.js — studio-lit portrait of each cast GLB via characters/viewer.html
+const fs = require('fs');
+try { fs.mkdirSync('/tmp/ri-shots', { recursive: true }); } catch (e) {}
 const puppeteer = require('puppeteer');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 (async () => {

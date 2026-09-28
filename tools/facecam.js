@@ -1,4 +1,6 @@
 // close-up face camera probe: node facecam.js zN:beat lookY dist fov
+const fs = require('fs');
+try { fs.mkdirSync('/tmp/ri-shots', { recursive: true }); } catch (e) {}
 const puppeteer = require('puppeteer');
 (async () => {
   const [zb = 'z1:1', lookY = '0.95', dist = '0.55', fov = '40'] = process.argv.slice(2);

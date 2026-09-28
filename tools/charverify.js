@@ -1,5 +1,7 @@
 // charverify.js — in-browser proof that the four cast GLBs load, swap in, and render.
 // Usage: node tools/charverify.js   (server must be running on :8080)
+const fs = require('fs');
+try { fs.mkdirSync('/tmp/ri-shots', { recursive: true }); } catch (e) {}
 const puppeteer = require('puppeteer');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
