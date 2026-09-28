@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<script>
+/* boot watchdog: never leave the user on a silent black screen */
+(function () {
+  var errs = [];
+  window.addEventListener('error', function (e) {
+    var t = e.target;
+    if (t && t !== window && t.tagName) {
+      errs.push('RESOURCE ' + t.tagName + ' failed: ' + (t.src || t.href || '').split('/').slice(-2).join('/'));
+      rescue();
+      return;
+    }
+    errs.push((e.message || 'error') + (e.filename ? ' @ ' + String(e.filename).split('/').pop() + ':' + e.lineno : ''));
+  }, true);
+  window.addEventListener('unhandledrejection', function (e) {
+    errs.push('promise: ' + ((e.reason && e.reason.message) || e.reason));
+  });
+  function rescue() {
+    if (window.__ready) return;
+    var l = document.getElementById('loader');
+    if (l) { l.classList.add('done'); setTimeout(function () { l.classList.add('hidden'); }, 600); }
+    var m = document.getElementById('menu');
+    if (m) m.classList.remove('hidden');
+    if (errs.length && !document.getElementById('booterr')) {
+      var b = document.createElement('div');
+      b.id = 'booterr';
+      b.textContent = 'Warm-up issue — some content may be missing: ' + errs.slice(0, 3).join('  ·  ');
+      document.body.appendChild(b);
+    }
+  }
+  setTimeout(rescue, 25000);
+})();
+</script>
+<link rel="icon href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307080c'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='%23d8b46a'%3E蛊%3C/text%3E%3C/svg%3E" />
+<title>Reverend Insanity — A 3D Chapter World · The Omniarch Translation</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<canvas id="gl"></canvas>
+
+<!-- ============ LOADING ============ -->
+<div id="loader" class="overlay">
+  <div class="loader-inner">
+    <div class="loader-glyph">蛊</div>
+    <div class="loader-title">REVEREND INSANITY</div>
+    <div class="loader-sub">weaving the5 chapters into a living world…</div>
+    <div class="loader-bar"><div id="loader-fill"></div></div>
+    <div class="loader-pct" id="loader-pct">0%</div>
+  </div>
+</div>
+
+<!-- ============ MAIN MENU ============ -->
+<div id="menu" class="overlay hidden">
+  <div class="menu-scroll">
+    <header class="menu-head">
+      <div class="menu-series">Featured Series · The Omniarch Translation</div>
+      <h1 class="menu-logo"><span class="menu-logo-cn">蛊真人</span> REVEREND INSANITY</h1>
+      <div class="menu-byline">by <b>Gu Zhen Ren</b> 蛊真人 · Translator: <b>The Omniarch</b></div>
+      <div class="menu-tags"><span>Xianxia</span><span>Dark Fantasy</span><span>Action</span><span>Psychological</span></div>
+      <div class="menu-vol">
+        <span class="menu-vol-label">Vol. 1 — Demonic Nature Never Changes</span>
+        <span class="menu-vol-cn">魔性不改</span>
+        <span class="menu-vol-prog">5 / 2,334 chapters typeset · Chapter 6 at the bench</span>
+      </div>
+    </header>
+
+    <div class="menu-section-title"><i></i><span>Chapters — a 3D world</span><i></i></div>
+    <div id="chapter-cards" class="chapter-cards"><!-- built by hud.js --></div>
+
+    <footer class="menu-foot">
+      <p class="menu-foot-quote">“Say not that the mighty mountains stand unyielding as iron;<br/>Today, I stride forward and cross them anew.”</p>
+      <p class="menu-foot-note">Chapters 1–5 rendered as one continuous world · Drag to look · Scroll to breathe closer · Beats play themselves</p>
+    </footer>
+  </div>
+</div>
+
+<!-- ============ ZONE TITLE CARD ============ -->
+<div id="titlecard" class="hidden">
+  <div class="tc-rule"></div>
+  <div class="tc-kicker" id="tc-kicker">第一章</div>
+  <div class="tc-title" id="tc-title">Chapter Title</div>
+  <div class="tc-quote" id="tc-quote">quote</div>
+  <div class="tc-rule"></div>
+</div>
+
+<!-- ============ IN-WORLD HUD ============ -->
+<div id="hud" class="hidden">
+  <div class="hud-top">
+    <div class="hud-chapter">
+      <div class="hud-chapter-cn" id="hud-cn">第一章</div>
+      <div class="hud-chapter-title" id="hud-title">…</div>
+      <div class="hud-chapter-vol">Vol. 1 · Demonic Nature Never Changes</div>
+    </div>
+    <div class="hud-btns">
+      <button class="hbtn" id="btn-music" title="Chapter music on/off (N)">♫ Music</button>
+      <button class="hbtn" id="btn-mute" title="Sound on/off">♪</button>
+      <button class="hbtn" id="btn-menu" title="Chapter map (Esc)">☰ Map</button>
+    </div>
+  </div>
+
+  <div id="labels"></div>
+
+  <div class="hud-bottom">
+    <div id="caption" class="caption">
+      <div class="cap-kicker" id="cap-kicker"></div>
+      <div class="cap-text" id="cap-text"></div>
+    </div>
+    <div class="hud-nav">
+      <button class="nav-arrow" id="btn-prev" title="Previous beat (←)">‹</button>
+      <div id="dots" class="dots"></div>
+      <button class="nav-arrow" id="btn-next" title="Next beat (→)">›</button>
+      <button class="nav-nextzone hidden" id="btn-nextzone">Next Chapter ›</button>
+    </div>
+    <div class="hud-hint">drag&nbsp;·&nbsp;look&nbsp;&nbsp; scroll&nbsp;·&nbsp;zoom&nbsp;&nbsp; ←&nbsp;→&nbsp;·&nbsp;beats&nbsp;&nbsp; Esc&nbsp;·&nbsp;map</div>
+  </div>
+</div>
+
+<!-- ============ FLASH / FADES ============ -->
+<div id="fade" class="fxlayer"></div>
+<div id="flash" class="fxlayer"></div>
+<div id="vignette" class="fxlayer"></div>
+
+<script src="bundle.js"></script>
+<style>#booterr{position:fixed;left:0;right:0;bottom:0;z-index:120;background:#2a0d10;color:#ffb4a8;font:12px/1.5 ui-monospace,monospace;padding:8px 14px;border-top:1px solid #7a2a22}</style>
+</body>
+</html>

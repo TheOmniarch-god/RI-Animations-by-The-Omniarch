@@ -1,27 +1,58 @@
-# Reverend Insanity — Character Archive (Vol.1, Ch1–5)
+# RI — Animations & 3D World (The Omniarch)
 
-Stylized 3D character models for *Reverend Insanity* (Gu Zhen Ren), built for the
-companion 3D world experience (ri-world). Every character has a **seeded, specific
-face** — randomized once, then fixed, so each character always looks the same.
+Everything for the *Reverend Insanity* (Gu Zhen Ren, Vol.1 "Demonic Nature Never
+Changes", Ch1–5, as translated at https://ri.theomniarch.com.ng/) 3D project:
+the interactive world, the character model archive, and the build/test tooling.
 
-Characters are **modelled first**; animation is being polished one chapter at a time,
-starting with Chapter 1.
+**This repository is the source of truth.** Work happens in a local clone of this
+repo; the sandbox workspace holds nothing canonical outside the clone.
 
-## Contents
+## Layout
 
-| Path | What |
-|---|---|
-| `characters/*.glb` | 13 export-ready character models (binary glTF, embedded PNG textures) |
-| `characters/recipes.json` | Metadata: title, chapter, description, file per character |
-| `viewer.html` | Interactive archive viewer (orbit / zoom / select) |
-| `charsheet.html` | Character sheet + in-browser GLB re-exporter (download buttons) |
-| `figures/` | Canonical generator source (`figures.js`, `util.js`) |
-| `three/`, `jsm/` | Vendored three.js 0.160 core + loader/exporter utils (repo is self-contained, works offline & on GitHub Pages) |
+```
+world/                the interactive 3D world (runnable app)
+  index.html          app shell — loads bundle.js as a classic script
+  bundle.js           compiled single-script build (rebuild: sh tools/build.sh)
+  js/                 source modules (main, chapters, hud, rig, audio, sky, figures, fx, water, zones/z1..z5)
+  css/  music/        styling + five per-chapter licensed MP3 tracks
+  lib/three/          vendored three.js 0.160.0 core + addons (no CDN)
+  server.py           static server with CORS (preview-iframe safe)
+  README.md           full app documentation (controls, URL params, music credits)
+characters/           13 export-ready .glb character models + recipes.json
+viewer.html           interactive GLB character archive (orbit/zoom) — also works on GitHub Pages
+charsheet.html        cast table + in-browser GLB re-exporter (download buttons)
+figures/              canonical procedural generator source (figures.js, util.js)
+jsm/  three/          vendored three.js bits so the viewer/charsheet run offline
+tools/                build + verification harnesses (run from repo root):
+  build.sh            self-healing esbuild bundle (world/js/ → world/bundle.js)
+  shots.js            screenshot + runtime-error harness (out: /tmp/ri-shots/)
+  facecam.js          close-up face camera probe
+  expchars.js         GLB character exporter (puppeteer; out: characters/)
+  itest.js            interactive-flow regression (0 errors expected)
+  blacktest.js        boot black-screen watchdog
+  finaltest.js        auto-advance + click-through inside a sandboxed iframe
+  iframetest.js       minimal iframe repro
+package.json          tool deps: esbuild, puppeteer, three (stub-healed by build.sh)
+```
 
-## The cast
+## Quick start (from a fresh clone)
 
-- **Fang Yuan** — protagonist, rendered as ~15 years old, wild black hair, tattered emerald robe (Demon Fang Yuan)
-- **Fang Zheng** — his twin, grey-blue robe, topknot
+```bash
+git clone https://github.com/TheOmniarch-god/RI-Animations-by-The-Omniarch.git
+cd RI-Animations-by-The-Omniarch
+PUPPETEER_SKIP_DOWNLOAD=1 npm install          # one-time tool install
+python3 world/server.py 8080                   # → http://localhost:8080/   (the 3D world)
+sh tools/build.sh                              # after editing world/js/*
+node tools/finaltest.js                        # full regression (expects 0 errors)
+```
+
+Character viewer: serve the repo root (`python3 -m http.server 9000`) →
+`http://localhost:9000/viewer.html`. On GitHub Pages it just works.
+
+## The cast (characters/)
+
+- **Fang Yuan** — protagonist, rendered ~15, wild black hair, tattered emerald robe (Demon Fang Yuan)
+- **Fang Zheng** — twin, grey-blue robe, topknot
 - **Shen Cui** — maidservant, green tunic, pearl hairpin
 - **Gu Yue Elder / Elder Chi Lian** — clan elders, scholar hats
 - **Gu Yue Geniuses I–III** — trial candidates, variant builds
@@ -29,42 +60,30 @@ starting with Chapter 1.
 - **Predicament Beast** — spined shadow-beast from Ren Zu's parable (Ch5)
 - **Spring Autumn Cicada** — the time-travel Gu (Ch2)
 
-## How to view
+Every character has a **seeded, specific face** (randomized once, fixed forever).
+Regenerate any model via `charsheet.html`. Workflow: characters are modelled first,
+then animation is polished **one chapter at a time**, starting with Chapter 1.
 
-No build step. Either:
+> **Roadmap — realistic characters:** the current figures are procedural low-poly.
+> The next stage replaces/ups them with AI-generated PBR character models
+> (Meshy-style: text→3D with PBR textures + auto-rig), imported as GLB and
+> rigged into the world's scene system. Files for that live here once generated.
 
-```sh
-python3 -m http.server 8000
-# open http://localhost:8000/viewer.html
-```
+## Music credits (world/music/)
 
-or push to a GitHub repo and enable GitHub Pages — `viewer.html` and `charsheet.html`
-resolve all assets relative to the repo root.
+| Chapter | Track | Source | License |
+|---|---|---|---|
+| Ch 1 (siege) | shakuhachi, driving | Miyuki Nakajima, *Shakuhachi Classical* trk 5 — Jamendo/Internet Archive `jamendo-179988` | CC BY-NC-ND 3.0 |
+| Ch 2 (river of time) | shakuhachi, meditative | same album, trk 1 | CC BY-NC-ND 3.0 |
+| Ch 3 (dawn) | shakuhachi, gentle | same album, trk 2 | CC BY-NC-ND 3.0 |
+| Ch 4 (trials) | shakuhachi, grand | same album, trk 4 | CC BY-NC-ND 3.0 |
+| Ch 5 (hope / Ren Zu) | epic Japanese orchestral | *Epic Japanese Music feat. Mamoru Ogata* — Mogami of Yamagata, Internet Archive | CC BY-SA 4.0 |
 
-## How the models are made
-
-The figures are generated procedurally in `figures/figures.js` (three.js): robe,
-trim, sash, hair, hands, legs, a canvas-baked face texture per seed (`face: N`),
-and per-character props (hairpins, hats, blood, tatters). The cast table in
-`charsheet.html` is the single source of truth for the named characters; the same
-code runs inside the world app to place them in scenes.
-
-To regenerate a model, open `charsheet.html` and click the ⬇ button on a card.
+3-minute cuts, 2.5–3 s fades, 96 kbps MP3. Attribution required; NC/ND terms apply
+to the Nakajima tracks (non-commercial, no derivatives).
 
 ## License
 
-Character models and generator code: MIT (see license block below).
-Source text (Reverend Insanity) is © the original author; this repo contains only
-fan-made 3D assets and short quoted chapter references in metadata.
-
-MIT License
-Copyright (c) 2026 The Omniarch
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this
-software and associated documentation files (the "Software"), to deal in the Software
-without restriction, including without limitation the rights to use, copy, modify,
-merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to the following
-conditions: The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS",
-WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED.
+Character models, generator code, world app code, tooling: MIT (c) 2026 The Omniarch.
+Source text (Reverend Insanity) is © the original author; this repo contains fan-made
+3D assets and short quoted chapter references in metadata/captions only.
