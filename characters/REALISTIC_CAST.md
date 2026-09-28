@@ -1,9 +1,9 @@
-# Realistic cast — Meshy (free tier) playbook
+# Realistic cast — Tripo3D API + free web playbook
 
 The world app now runs a **GLB-first character pipeline**: it loads
 `characters/<id>.glb` at boot and swaps it in-place into every scene instance of
 that character (auto-scaled to the right height, auto-plays an idle animation if
-the GLB has one). **Overwrite the four placeholder files below with your Meshy
+the GLB has one). **Overwrite the four placeholder files below with your generated
 exports and the realistic characters appear everywhere automatically.**
 
 ## Files (exact names — the world watches these)
@@ -15,11 +15,35 @@ exports and the realistic characters appear everywhere automatically.**
 | `shen_cui.glb` | Shen Cui (maidservant) |
 | `gu_yue_elder.glb` | Gu Yue elder |
 
-## Steps (no spending required — free signup credits)
+## Route A — Tripo3D API (what the agent runs)
 
-1. Sign up at **meshy.ai** (you get free credits on signup).
-2. In **Text-to-3D** (or Image-to-3D for stronger style control), generate each
-   character below. Recommended settings:
+`tools/tripo_cast.js` does the whole loop (submit → poll → download GLB + preview
+PNG → land in this folder). The key is passed via environment only, never stored:
+
+```bash
+TRIPO_API_KEY=*** node tools/tripo_cast.js test      # ONE cheap test: shen_cui, standard texture
+TRIPO_API_KEY=*** node tools/tripo_cast.js all     # all four, standard texture
+TRIPO_API_KEY=*** node tools/tripo_cast.js all --detailed   # HD PBR textures (more credits)
+```
+
+- Model `v3.1-20260211`, `texture+pbr on`, `auto_size` (real-world meters),
+  face limit 400k (keeps GLBs light for the repo).
+- Typical task time 10–120 s; previews land in `characters/previews/<id>.png`
+  for visual review before the cast is declared good.
+- Cost check happens after the single `test` run, before the rest is spent.
+
+Get a key: tripo3d.ai → account → **API Keys** (shown only once at creation).
+Check the same dashboard for your credit balance — new accounts usually come with
+free credits; the agent will stop at the first billing error so nothing is
+overspent.
+
+## Route B — free web generation (zero spending)
+
+If no API credits are available, generate in the web app instead (Meshy or Tripo
+web UIs both have free signup credits):
+
+1. Sign up (free credits).
+2. **Text-to-3D** per character with the prompts below. Settings:
    - **PBR texture: ON** (this is the "realistic, not shapes" part — skin, cloth, hair)
    - **Auto-rig / smart skeleton: ON** if offered (the world will play the idle clip)
    - Full body, single character, A-pose or T-pose, plain/neutral background
