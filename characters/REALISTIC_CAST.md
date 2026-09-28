@@ -1,25 +1,33 @@
 # Realistic cast — Tripo3D API + free web playbook
 
-## Status: ✅ MAIN CAST DELIVERED — 2K DETAILED PBR (2026-09-28, Route A)
+## Status: ✅ MAIN CAST DELIVERED — 4K PBR (2026-09-28, Route A)
 
-All four main characters cast via Tripo3D API v3 (`tripo-cli`), **2 rounds,
-120 free credits total**:
+All four main characters at **4096px PBR** — pro-Blender-tier master quality:
 
 - **Round 1** (20 cr each, standard 1K PBR) — superseded.
-- **Round 2** (30 cr each, **detailed 2K PBR**) — the shipped version. Tripo's
-  API top tier is `texture_quality=detailed` (2048px PBR); there is no 4K tier.
-  We ship **full 2K textures, no downscale** + Draco mesh compression.
+- **Round 2** (30 cr each, **detailed 2K PBR**) — the Tripo source (API top
+  tier is 2K; there is no 4K generation tier).
+- **Round 3** (0 cr, local): every PBR map (baseColor / ORM / Normal × 4
+  chars = 12 maps) **super-resolved 2K → 4K** with ESPCN×2 (overlapping
+  quadrants, seam-blended) and the GLBs repacked. Draco mesh untouched.
 
-| File | Character | Task | 2K web size | Notes |
+| File | Character | Task | 4K web size | Notes |
 |---|---|---|---|---|
-| `fang_yuan.glb` | Fang Yuan | `85a25611` | 2.78 MB | **recast v2**: tall lean 15-yo, cold sharp face, **black** tattered robe w/ bloodstains (was wrongly emerald-green in v1) |
-| `fang_zheng.glb` | Fang Zheng | `7e76e639` | 3.88 MB | gentle twin, topknot, grey-blue robe |
-| `shen_cui.glb` | Shen Cui | `c0417aa6` | 3.03 MB | 16-yo maidservant, gold hairpin, muted green |
-| `gu_yue_elder.glb` | Gu Yue elder | `3010392a` | 2.67 MB | 60-yo, grey beard, ivory+carmine robe |
+| `fang_yuan.glb` | Fang Yuan | `85a25611` | 9.3 MB | **recast v2**: tall lean 15-yo, cold sharp face, **black** tattered robe w/ bloodstains (was wrongly emerald-green in v1) |
+| `fang_zheng.glb` | Fang Zheng | `7e76e639` | 12.3 MB | gentle twin, topknot, grey-blue robe |
+| `shen_cui.glb` | Shen Cui | `c0417aa6` | 10.4 MB | 16-yo maidservant, gold hairpin, muted green |
+| `gu_yue_elder.glb` | Gu Yue elder | `3010392a` | 9.3 MB | 60-yo, grey beard, ivory+carmine robe |
 
-Post-processing: **Draco mesh compression only — textures stay 2048px**
-(raw Tripo export ≈18 MB → ≈2.7–3.9 MB). `charassets.js` wires three's
-`DRACOLoader`, decoder hosted at `world/lib/draco/` (same-origin, no CDN).
+Tooling: `tools/glb4k.py` + `tools/glb4k_worker.py` (4K retexture pipeline;
+each texture runs in a fresh subprocess — the sandbox RAM ceiling is ~1.5 GB).
+GitHub is the storage, so full 4K masters are what the world loads and what
+you review (Babylon: raw links of `characters/<id>.glb`).
+
+Verification: all four 4K GLBs load & render clean in `characters/viewer.html`
+(studio, 0 console errors) and in the world (charassets log: GLB loaded +
+swapped for every instance). Note: the sandbox's headless software-GL Chrome
+(1.9 GB RAM) OOMs on a full 4K world — expected; real GPUs handle the ~800 MB
+VRAM comfortably.
 
 Canon notes (ages/descriptions as written in Ch1–5, keep on recasts):
 - **Fang Yuan** — 15 (reborn body), tall/lean, wild long black hair, cold

@@ -19,7 +19,7 @@ world/                the interactive 3D world (runnable app)
   server.py           static server with CORS (preview-iframe safe)
   README.md           full app documentation (controls, URL params, music credits)
 characters/           13 .glb models + recipes.json — main 4 cast are realistic
-                      Tripo3D detailed 2K PBR (Draco, ~2.7–3.9 MB); rest are
+                      Tripo3D 4K PBR (Draco, ~9–12 MB); rest are
                       procedural placeholders. See REALISTIC_CAST.md (status: done)
 viewer.html           interactive GLB character archive (orbit/zoom) — also works on GitHub Pages
 charsheet.html        cast table + in-browser GLB re-exporter (download buttons)
@@ -73,7 +73,7 @@ then animation is polished **one chapter at a time**, starting with Chapter 1.
 > (`world/js/charassets.js`) that loads the main cast from this `characters/`
 > folder at boot and swaps them in-place into every scene instance (auto-fit,
 > auto-play idle clip). The four main cast GLBs are now **realistic Tripo3D PBR
-> models** (Draco-compressed, full 2K detailed textures, ~2.7–3.9 MB each) — the world's
+> models** (4K PBR — 2K Tripo detailed super-resolved to 4096px, Draco mesh, ~9–12 MB each) — the world's
 > `GLTFLoader` is wired with three's `DRACOLoader` (decoder hosted at
 > `world/lib/draco/`, same-origin so the offline preview iframe needs no CDN).
 > Fang Yuan wears the **black** tattered robe (canon — not green). Drop any PBR export (Meshy/Tripo/Luma) over a filename and the character
