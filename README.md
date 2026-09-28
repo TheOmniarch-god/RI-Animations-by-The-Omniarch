@@ -64,10 +64,13 @@ Every character has a **seeded, specific face** (randomized once, fixed forever)
 Regenerate any model via `charsheet.html`. Workflow: characters are modelled first,
 then animation is polished **one chapter at a time**, starting with Chapter 1.
 
-> **Roadmap — realistic characters:** the current figures are procedural low-poly.
-> The next stage replaces/ups them with AI-generated PBR character models
-> (Meshy-style: text→3D with PBR textures + auto-rig), imported as GLB and
-> rigged into the world's scene system. Files for that live here once generated.
+> **Realistic characters (in progress):** the world already runs a **GLB-first
+> pipeline** (`world/js/charassets.js`) — it loads the main cast from this
+> `characters/` folder at boot and swaps them in-place into every scene instance
+> (auto-fit, auto-play idle clip). The current GLBs are procedural placeholders;
+> drop **Meshy-generated PBR exports** over the same four filenames and the
+> realistic characters appear everywhere. Playbook with paste-ready prompts:
+> [`characters/REALISTIC_CAST.md`](characters/REALISTIC_CAST.md).
 
 ## Music credits (world/music/)
 

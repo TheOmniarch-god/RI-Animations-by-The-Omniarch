@@ -3,6 +3,7 @@
 // ============================================================
 import * as THREE from 'three';
 import { rng, rr, pick, TEX, glowSprite } from './util.js';
+import { charStore } from './charassets.js';
 
 const MAT = (color, o = {}) => new THREE.MeshStandardMaterial({
   color, roughness: o.rough ?? 0.82, metalness: o.metal ?? 0.04,
@@ -317,6 +318,14 @@ export function applyPose(fig, name) {
 
 /** per-frame figure animation */
 export function animateFigure(fig, t) {
+  if (fig.isGLB) {
+    if (fig.mixer) {
+      const dt = Math.min(0.1, Math.max(0, t - (fig._lt || 0)));
+      fig.mixer.update(dt);
+    }
+    fig._lt = t;
+    return;
+  }
   const p = fig.parts;
   if (fig.pose === 'walk') {
     const w = t * 5.2 + fig.t0;
@@ -350,6 +359,7 @@ export function makeFangYuan() {
   });
   f.parts.head.scale.setScalar(1.05);      // youthfully proportioned head
   f.isFangYuan = true;
+  charStore.onCreated('fang_yuan', f);
   return f;
 }
 
@@ -358,12 +368,15 @@ export function makeFangZheng() {
   const f = makeFigure({ robe: 0x51606e, trim: 0x36424d, sash: 0x4a3b28, hair: 'bun', scale: 0.9, age: 'youth', face: 12, wide: 0.93 });
   f.parts.head.rotation.x = 0.34;
   f.isFangZheng = true;
+  charStore.onCreated('fang_zheng', f);
   return f;
 }
 
 /** Clan elder */
 export function makeElder(robe = 0xe6e1d4, accent = 0x8c2f26) {
-  return makeFigure({ robe, trim: accent, sash: accent, hair: 'bun', beard: true, scale: 1.0, hat: 'scholar' });
+  const f = makeFigure({ robe, trim: accent, sash: accent, hair: 'bun', beard: true, scale: 1.0, hat: 'scholar' });
+  if (robe === 0xe6e1d4 && accent === 0x8c2f26) charStore.onCreated('gu_yue_elder', f);
+  return f;
 }
 
 /** Shen Cui — maidservant, green tunic, pearl hairpin */
@@ -373,6 +386,7 @@ export function makeMaid() {
   pin.rotation.z = Math.PI / 2.4;
   pin.position.set(0.02, 0.11, -0.02);
   f.parts.head.add(pin);
+  charStore.onCreated('shen_cui', f);
   const pearl = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 6), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff4dd, emissiveIntensity: 0.6 }));
   pearl.position.set(0.07, 0.14, -0.02);
   f.parts.head.add(pearl);

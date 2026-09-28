@@ -11,6 +11,7 @@ import sys
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(ROOT)  # /characters/* is served from the repo root
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
 
 
@@ -23,6 +24,17 @@ class Handler(SimpleHTTPRequestHandler):
         ".wasm": "application/wasm",
         ".svg": "image/svg+xml",
     }
+
+    def translate_path(self, path):
+        # /characters/* → repo root's characters/ (GLB character archive)
+        if path == "/characters" or path.startswith("/characters/"):
+            rel = path[len("/characters/"):].lstrip("/")
+            base = os.path.normpath(os.path.join(REPO_ROOT, "characters"))
+            full = os.path.normpath(os.path.join(base, rel))
+            if full == base or full.startswith(base + os.sep):
+                return full
+            return os.path.join(ROOT, "nope")
+        return super().translate_path(path)
 
     def end_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")

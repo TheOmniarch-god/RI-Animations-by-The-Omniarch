@@ -11,6 +11,7 @@ import { CHAPTERS } from './chapters.js';
 import { Hud } from './hud.js';
 import { CameraRig } from './rig.js';
 import { AudioEngine } from './audio.js';
+import { charStore } from './charassets.js';
 import { createSky, createCloudSea, createDistantPeaks } from './sky.js';
 import { clamp, damp, TEX } from './util.js';
 import { zone1 } from './zones/z1.js';
@@ -248,6 +249,7 @@ async function boot() {
       toMenu();
     }
   } catch (e) { console.error('boot entry failed', e); }
+  charStore.init();
   window.__ready = true;
 }
 
@@ -448,4 +450,4 @@ boot();
 loop();
 
 // expose for debugging / screenshots
-window.__world = { goToZone, gotoBeat, state, hud, ctx, audio, rig: () => rig, setEnv, snapEnv };
+window.__world = { goToZone, gotoBeat, state, hud, ctx, audio, chars: charStore, rig: () => rig, setEnv, snapEnv };

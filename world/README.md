@@ -64,6 +64,9 @@ js/hud.js           menu, captions, world labels, title card, flash/fade, step c
 js/rig.js           camera rig: beat anchors + drag/wheel + shake
 js/audio.js         per-chapter music (music/ *.mp3) + fully synthesized WebAudio SFX/beds
 js/sky.js  util.js  figures.js  fx.js  water.js    shared systems
+js/charassets.js    GLB-first character pipeline: loads the main cast from the repo's
+                    characters/ archive, swaps in-place into every scene instance,
+                    auto-fits, auto-plays idle clips (see characters/REALISTIC_CAST.md)
 js/zones/z1..z5.js  the five chapter zones (29 beats total)
 lib/three/          vendored Three.js 0.160.0 core + addons (no CDN)
 music/              five per-chapter MP3s (licensed, see Music credits)
