@@ -14,6 +14,20 @@
 </head>
 <body>
 <div id="label"></div>
+<div id="animui">
+  <button data-a="idle">Idle</button>
+  <button data-a="walk">Walk</button>
+  <button data-a="death">Death</button>
+</div>
+<style>
+  #animui { position: fixed; right: 16px; bottom: 14px; display: flex; gap: 6px; }
+  #animui button {
+    color: #d8d3c8; background: rgba(0,0,0,.5); border: 1px solid #4a4a55;
+    font: 600 12px/1 Georgia, serif; letter-spacing: .08em; padding: 7px 12px;
+    border-radius: 4px; cursor: pointer;
+  }
+  #animui button:hover { background: rgba(60,60,72,.8); }
+</style>
 <script type="importmap">
 { "imports": { "three": "../lib/three/three.module.js" } }
 </script>
@@ -21,6 +35,7 @@
 import * as THREE from '../lib/three/three.module.js';
 import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from '../lib/jsm/loaders/DRACOLoader.js';
+import { autoRig, createAnimator } from '../js/animlab.js';
 
 const params = new URLSearchParams(location.search);
 const id = params.get('m') || 'fang_yuan';
@@ -104,6 +119,21 @@ loader.load(id + '.glb', (gltf) => {
   modelRoot = root;
   window.__mixer = mixer;
   window.__loaded = true;
+  const animName = params.get('anim');
+  if (animName) {
+    const t0 = performance.now();
+    rig = autoRig(root);
+    if (rig) {
+      animator = createAnimator(rig);
+      animator.start(animName);
+      label.textContent += '  ·  AUTO-RIG ' + rig.bones.length + ' bones (' +
+        ((performance.now() - t0) / 1000).toFixed(1) + 's)';
+      window.__animator = animator;
+      window.__rig = rig;
+    } else {
+      label.textContent += '  ·  RIG FAILED';
+    }
+  }
 }, undefined, (e) => { label.textContent = 'LOAD ERROR: ' + (e && e.message || e); });
 
 // --- camera: gentle orbit, drag to look ---
@@ -120,7 +150,27 @@ addEventListener('wheel', e => { radius = Math.min(9, Math.max(2, radius + e.del
 
 // --- render loop (runs always; model may load any time) ---
 let modelRoot = null;
+let rig = null, animator = null, lastT = 0;
+
+// animation buttons (auto-rig on first use)
+document.querySelectorAll('#animui button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (!animator) {
+      if (!modelRoot) return;
+      rig = autoRig(modelRoot);
+      if (!rig) { label.textContent += '  ·  RIG FAILED'; return; }
+      animator = createAnimator(rig);
+      window.__animator = animator; window.__rig = rig;
+    }
+    animator.start(btn.dataset.a);
+  });
+});
+
 renderer.setAnimationLoop((t) => {
+  // real-time dt (capped for pathological pauses) — animations must run
+  // at wall-clock speed even on slow (software) renderers
+  const dt = Math.min(0.3, lastT ? (t - lastT) / 1000 : 0.016);
+  lastT = t;
   if (!dragging) theta += 0.0016;
   camera.position.set(
     radius * Math.sin(phi) * Math.sin(theta),
@@ -129,8 +179,9 @@ renderer.setAnimationLoop((t) => {
   );
   camera.lookAt(0, 1.02, 0);
   if (modelRoot) {
-    if (window.__mixer) window.__mixer.update(0.016);
-    if (location.search.includes('spin=1') && !dragging) modelRoot.rotation.y = t * 0.0004;
+    if (window.__mixer) window.__mixer.update(dt);
+    if (animator) animator.tick(dt);
+    if (location.search.includes('spin=1') && !dragging && !animator) modelRoot.rotation.y = t * 0.0004;
   }
   renderer.render(scene, camera);
 });

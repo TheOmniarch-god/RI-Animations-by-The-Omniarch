@@ -81,6 +81,19 @@ then animation is polished **one chapter at a time**, starting with Chapter 1.
 > Playbook with paste-ready prompts + cast log:
 > [`characters/REALISTIC_CAST.md`](characters/REALISTIC_CAST.md).
 
+### Animation (✅ homegrown — 0 credits, 0 clip files)
+
+The Tripo GLBs are unrigged, so instead of paying an animation API we build the
+rig **in code at load time**: `world/js/animlab.js` derives a 17-bone skeleton
+from each model's own silhouette (arm chain is data-driven), computes
+per-vertex skin weights (Gaussian falloff, top-4 blend — handles the tattered
+robe), and drives it with three procedural motions: **idle / walk / death**
+(Chapter 1's execution tone). Full 4K Fang Yuan (130k verts) rigs in 0.3 s.
+
+- Studio: `characters/viewer.html?m=fang_yuan` → **Idle / Walk / Death** buttons
+- Live demo: [animation/death_demo.gif](animation/death_demo.gif) — standing → stagger → head-down collapse, captured from the rig at 4K
+- Design notes + the four skinning gotchas we fixed: [`ANIMATION.md`](ANIMATION.md)
+
 ## Music credits (world/music/)
 
 | Chapter | Track | Source | License |
