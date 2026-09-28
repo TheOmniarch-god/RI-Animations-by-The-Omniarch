@@ -21,7 +21,17 @@ world/js/animlab.js
     • idle  — breathing, subtle head sway
     • walk  — scissor legs, counter-swing arms, torso pitch, root bob
     • death — stagger → head-down collapse → settle (Chapter 1 tone)
+    • turn  — held beat (statue) → one deliberate 2.6 s whole-body turn
+    • poem  — 2.6 s body turn to the western ridge, head lifted, stillness
+    • brace — the final breath: chin up, chest out, arms wide, low crouch,
+              body swings back to face the executioners (ryDelta continuity)
 ```
+
+Root-motion contract: motions return `root: {y, rx, rz, ry?, ryDelta?}`.
+`ry` is an ABSOLUTE body yaw, `ryDelta` is measured from the yaw the
+previous motion left — `start()` snaps on large absolute cuts, keeps small
+continuity, and `tick()` damps. That's what lets poem → brace swing the
+body from the western gaze back to the crowd in one smooth breath.
 
 **Try it:** `characters/viewer.html?m=fang_yuan` (or any of the four) →
 **Idle / Walk / Death** buttons, or `?anim=death` to autostart.
@@ -47,8 +57,46 @@ Full 4K Fang Yuan: 130,384 verts, rigs in **0.3 s**.
    dt (capped at 0.3 s) so animations run at real speed even at 1–2 fps
    on software GL.
 
-## Next: Chapter 1 integration (one chapter at a time)
-`world/js/charassets.js` swaps the GLBs into the main world scene. The
-execution beat (Fang Yuan's public sentencing) will drive:
-idle (on the scaffold) → death (execution) → detonation.
-Same `autoRig` + `createAnimator` — no new machinery needed.
+## Chapter 1 integration (DONE — the summit siege, one chapter at a time)
+
+`world/js/charassets.js` now auto-rigs EVERY swapped GLB instance
+(`autoRig` + `createAnimator`, default `idle`), so all 16 main-cast
+instances across the five zones breathe on their own the moment the 4K
+models load. `animateFigure()` ticks `record.animator` per frame; a zone
+switches motions with `record.animator.start('poem' | 'brace' | ...)`.
+
+Chapter 1 (`world/js/zones/z1.js`) drives Fang Yuan's death exactly as
+the chapter reads it:
+
+| beat | motion | text it plays |
+|------|--------|---------------|
+| 0 summit siege | `idle` | besieged, every path to life severed |
+| 1 the standoff | `turn` | "stood as motionless as a statue, slowly turned around" — and the host **recoils a full pace** (z1 kicks all 40 besiegers outward, timed to `TURN_END`) |
+| 2 the dying verse | `poem` | whole body turns west to the setting sun, the verse from stillness |
+| 3 self-detonation | `brace` | final breath + crouch while the body swings back to face his executioners, as the armed blast (flash/shake/bursts/rings) fires |
+
+Design notes:
+- The turn is a WHOLE-BODY turn (the text says "turned around", not a
+  head turn). Beat 1's crowd recoil is a pure function of `beatT`
+  (no latches to desync); navigation away restores positions.
+- `WEST_YAW` / `TURN_FROM` are z1-specific (his group yaw + camera
+  bearings) — do not reuse those constants in other zones.
+- The five kneeling elders inside the ancestral-hall pavilion keep their
+  procedural `pray` pose via `group.userData.noGLB = true` (a GLB elder
+  would stand — the kneel is the point).
+- `window.__charUrls` (set before the bundle loads) overrides the archive —
+  the headless harness uses `tools/glb2k.py` 2K test builds of the 4K GLBs
+  (4K textures OOM the 1.9 GB SwiftShader box; 2K decodes fit).
+
+Verified headless (real world code, 2K test textures, zero console errors):
+pose telemetry through the full sequence — turn lands at yaw 0.62
+(facing the host), poem at −1.85 (facing west), brace at 0.60 with root
+drop −0.09 (crouch), and the figure stands again on return navigation.
+Frames: `animation/ch1/verify_{A..E}.png` (512² SwiftShader — the live
+preview on a real GPU is the real look).
+
+## Next: Chapters 2–5 (one chapter at a time)
+z2 (Fang Yuan + Fang Zheng doublet), z3 (Shen Cui), z4 (the elders'
+ceremony), z5 (the aperture). Same machinery: per-beat `start(...)` —
+plus a couple of shared motions if the chapters call for them (kneel,
+bow, point).

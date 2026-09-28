@@ -319,10 +319,9 @@ export function applyPose(fig, name) {
 /** per-frame figure animation */
 export function animateFigure(fig, t) {
   if (fig.isGLB) {
-    if (fig.mixer) {
-      const dt = Math.min(0.1, Math.max(0, t - (fig._lt || 0)));
-      fig.mixer.update(dt);
-    }
+    const dt = Math.min(0.1, Math.max(0, t - (fig._lt || 0)));
+    if (fig.mixer) fig.mixer.update(dt);
+    if (fig.animator) fig.animator.tick(dt); // live auto-rig (idle by default)
     fig._lt = t;
     return;
   }

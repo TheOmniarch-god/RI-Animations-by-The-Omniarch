@@ -14,13 +14,16 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../lib/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from '../lib/jsm/loaders/DRACOLoader.js';
+import { autoRig, createAnimator } from './animlab.js';
 
-export const CHAR_URLS = {
+// window.__charUrls (set before the bundle loads) overrides the archive —
+// used by the lean headless harness to swap in lighter test builds.
+export const CHAR_URLS = Object.assign({
   fang_yuan: 'characters/fang_yuan.glb',
   fang_zheng: 'characters/fang_zheng.glb',
   shen_cui: 'characters/shen_cui.glb',
   gu_yue_elder: 'characters/gu_yue_elder.glb',
-};
+}, (typeof window !== 'undefined' && window.__charUrls) || {});
 
 export class CharStore {
   constructor() {
@@ -71,6 +74,7 @@ export class CharStore {
   /** replace the procedural contents of record.group with the GLB (fitted) */
   _swap(record, asset, id) {
     const g = record.group;
+    if (g.userData.noGLB) return; // zone opted out (e.g. kneeling elders keep their pose)
     if (g.children.some(c => c.userData.riGlbRoot)) return; // already swapped
 
     // target fit: match the procedural figure's world bbox (height + base + center)
@@ -112,6 +116,23 @@ export class CharStore {
       const clip = asset.anims.find(a => /idle|stand/i.test(a.name)) || asset.anims[0];
       mixer.clipAction(clip).play();
       record.mixer = mixer;
+    }
+
+    // Homegrown auto-rig: the Tripo GLBs carry no skeleton, so derive a
+    // 17-bone rig from the mesh and give the instance a live procedural
+    // idle. animateFigure() ticks record.animator every frame; a zone can
+    // switch motions with record.animator.start('poem' | 'brace' | ...).
+    try {
+      g.updateWorldMatrix(true, false); // fresh ancestors before the bind
+      const rig = autoRig(inst);
+      if (rig) {
+        const animator = createAnimator(rig);
+        animator.start('idle');
+        record.rig = rig;
+        record.animator = animator;
+      }
+    } catch (e) {
+      console.warn(`[charassets] ${id}: auto-rig failed — static GLB stays. ${e.message}`);
     }
     record.isGLB = true;
     record._lt = 0;

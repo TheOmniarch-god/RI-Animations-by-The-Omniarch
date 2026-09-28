@@ -14,6 +14,7 @@ import {
 import {
   makeStiltHouse, makePavilion, villageLights, rockyBlocks, makeBanner,
 } from './common.js';
+import { TURN_END } from '../animlab.js';
 
 const SUMMIT_H = (x, z) => {
   const r = Math.hypot(x, z);
@@ -226,6 +227,7 @@ export const zone1 = {
     refs.eldersInside = [];
     for (let i = 0; i < 5; i++) {
       const e = makeElder(0xe6e1d4, 0x8c2f26);
+      e.group.userData.noGLB = true; // the kneeling prayer pose is the point — keep procedural
       e.group.scale.setScalar(0.85);
       const ex = hx + Math.cos(i * 1.2) * 2.4, ez = hz + Math.sin(i * 1.2) * 2.4;
       e.group.position.set(ex, VILL_H(ex, ez) + 0.8, ez);
@@ -261,7 +263,7 @@ export const zone1 = {
       B(
         '青茅山 · Summit of Qing Mao Mountain',
         `<b>“Fang Yuan! Hand over the Spring Autumn Cicada without struggle, and I shall grant you a quick death!”</b>
-         <span class="stage">Tattered emerald robe, hair wild, body bathed in blood — every path to life has been severed. The trap has snapped shut; on this day, death is absolute.</span>`,
+         <span class="stage">Tattered dark robe, hair wild, body bathed in blood — every path to life has been severed. The trap has snapped shut; on this day, death is absolute.</span>`,
         { pos: [15.5, 7.2, 19.5], look: [0, 2.2, 0], fov: 52 },
         {
           top: 0x2a2a55, mid: 0xb0502a, bot: 0xf0a24a,
@@ -273,6 +275,7 @@ export const zone1 = {
         },
         {
           auto: 13,
+          onEnter: (z) => { const a = z.refs.fy.animator; if (a) a.start('idle'); },
           labels: [
             { text: 'Gu Yue Fang Yuan', sub: 'Old Demon Fang · five centuries of carnage', pos: [0, 3.6, 0] },
             { text: 'The Righteous Host', sub: 'sect leaders & young heroes, united as one', pos: [0, 4.5, -15] },
@@ -285,7 +288,7 @@ export const zone1 = {
       B(
         '僵持 · Six hours slip into eternity',
         `<b>His eyes were abyssal, like an ancient well — unfathomably deep, without shore and without bottom.</b>
-         <span class="stage">None of them dare make a move; every soul trembles before the final, dying wrath of Old Demon Fang. One slow turn of his head — and the multitude recoils a full pace in panic.</span>`,
+         <span class="stage">None of them dare make a move; every soul trembles before the final, dying wrath of Old Demon Fang. He stood as motionless as a statue — then slowly turned around. That solitary motion sent a convulsion through the host: the multitude recoiled in unison, a full pace in panic.</span>`,
         { pos: [7.2, 4.6, 9.4], look: [0, 2.35, 0], fov: 42 },
         {
           top: 0x232349, mid: 0x9c4226, bot: 0xe08b3e,
@@ -297,6 +300,7 @@ export const zone1 = {
         },
         {
           auto: 12,
+          onEnter: (z) => { const a = z.refs.fy.animator; if (a) a.start('turn'); },
           labels: [
             { text: 'Blood on grey-white stone', sub: 'the mountain rocks dyed dark red', pos: [2.5, 2.4, 2.5], cls: 'wl-red' },
           ],
@@ -321,6 +325,7 @@ export const zone1 = {
         },
         {
           auto: 14,
+          onEnter: (z) => { const a = z.refs.fy.animator; if (a) a.start('poem'); },
           labels: [
             { text: 'The western ridge', sub: 'sun sinks — clouds set ablaze', pos: [-70, 18, -22] },
           ],
@@ -348,6 +353,7 @@ export const zone1 = {
           onEnter: (z, c) => {
             const r = z.refs;
             r.explodeT = 0;
+            const a = r.fy.animator; if (a) a.start('brace'); // the final breath, then the blast
             c.hud.flashFx(1.0, 110, 1400);
             c.rig.shake(1.5, 2.0);
             c.audio.sfx('boom');
@@ -411,7 +417,7 @@ export const zone1 = {
   },
 
   /* ---------------- per-frame ---------------- */
-  update(ctx, t, dt, beat) {
+  update(ctx, t, dt, beat, beatT) {
     const r = this.refs;
     if (!r) return;
 
@@ -445,6 +451,32 @@ export const zone1 = {
         if (f.userData._bx != null) {
           f.position.set(f.userData._bx, f.userData._by, f.userData._bz);
           f.rotation.x = 0; f.rotation.z = 0;
+        }
+      });
+    }
+
+    // the multitude recoils a full pace — timed to the end of his turn
+    const allFig = [...r.heroes.map(h => h.group), ...r.host];
+    if (beat === 1 && beatT != null && beatT > TURN_END) {
+      const k = 1 - Math.pow(1 - Math.min(1, (beatT - TURN_END) / 1.1), 2); // easeOut
+      allFig.forEach((f, i) => {
+        if (f.userData._rx == null) {
+          f.userData._rx = f.position.x; f.userData._ry = f.position.y; f.userData._rz = f.position.z;
+          f.userData._rjx = f.rotation.x; f.userData._rjy = f.rotation.y;
+        }
+        const len = Math.hypot(f.userData._rx, f.userData._rz) || 1;
+        const wob = 1 + (i % 5) * 0.15;
+        f.position.x = f.userData._rx + (f.userData._rx / len) * k * 1.1 * wob;
+        f.position.z = f.userData._rz + (f.userData._rz / len) * k * 1.1 * wob;
+        f.position.y = f.userData._ry + k * k * 0.25;
+        f.rotation.x = f.userData._rjx + k * 0.35;
+        f.rotation.y = f.userData._rjy + k * 0.2 * ((i % 2) ? 1 : -1);
+      });
+    } else if (beat !== 1) {
+      allFig.forEach(f => {
+        if (f.userData._rx != null) {
+          f.position.set(f.userData._rx, f.userData._ry, f.userData._rz);
+          f.rotation.x = f.userData._rjx; f.rotation.y = f.userData._rjy;
         }
       });
     }

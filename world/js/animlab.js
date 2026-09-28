@@ -193,9 +193,14 @@ export function autoRig(root) {
 
 // ------------------------------------------------------------
 // procedural animations
-// Each returns { boneName: [rx, ry, rz], root?: {y, rz, rx} } for time t.
+// Each returns { boneName: [rx, ry, rz], root?: {y, rz, rx, ry?, ryDelta?} }
+// for time t. root.ry is an ABSOLUTE body yaw; root.ryDelta is measured from
+// the yaw the previous motion left (continuity across beat changes).
 // ------------------------------------------------------------
 const ZERO = [0, 0, 0];
+const clamp01 = v => Math.max(0, Math.min(1, v));
+const easeInOut = v => v * v * (3 - 2 * v);
+const easeOut = v => 1 - (1 - v) * (1 - v);
 
 function animIdle(t) {
   const br = Math.sin(t * 1.7);
@@ -292,7 +297,75 @@ function animDeath(t, H) {
   return out;
 }
 
-export const ANIMS = { idle: animIdle, walk: animWalk, death: animDeath };
+// ——————————————————————————
+// Ch1 motions — the summit siege, as played in world/js/zones/z1.js.
+// ——————————————————————————
+
+// "Fang Yuan, who had stood as motionless as a statue, slowly turned
+// around. That solitary motion sent a convulsion through the host."
+// A held beat (statue), then ONE deliberate 2.6 s turn of the whole body,
+// back-turned → facing the crowd. Absolute ry, z1-specific (his group yaw
+// + the camera bearing). The crowd recoil in z1 is timed to TURN_END.
+const TURN_FROM = 3.32, TURN_TO = 0.15, TURN_HOLD = 0.8, TURN_DUR = 2.6;
+export const TURN_END = TURN_HOLD + TURN_DUR; // ≈3.4 s into the beat
+function animTurn(t) {
+  const u = clamp01((t - TURN_HOLD) / TURN_DUR);
+  const e = easeInOut(u);
+  const br = Math.sin(t * 1.3);
+  const lead = Math.sin(u * Math.PI) * 0.3; // head leads the turn, then settles
+  return {
+    head: [0.03 + br * 0.01, lead, 0.02 * Math.sin(u * Math.PI)],
+    neck: [0.015, lead * 0.5, 0],
+    chest: [0.02 + br * 0.008, e * 0.05, 0],
+    spine: [0.015, e * 0.04, 0],
+    shoulderL: [0, 0, 0.06],
+    shoulderR: [0, 0, -0.06],
+    root: { y: 0, ry: TURN_FROM + (TURN_TO - TURN_FROM) * e },
+  };
+}
+
+// "Though the flesh perish, the demonic heart knows no regret."
+// A slow 2.6 s turn of the whole body toward the western ridge, head lifted
+// to the dying light, the verse delivered from stillness. WEST_YAW is
+// z1-specific (his group yaw + the ridge bearing) — do not reuse elsewhere.
+const WEST_YAW = -2.32;
+function animPoem(t) {
+  const e = easeInOut(clamp01(t / 2.6));
+  const br = Math.sin(t * 1.05);
+  return {
+    head: [-0.07 + br * 0.008, 0.08 * (1 - e), 0.02],
+    neck: [-0.035, 0.05 * (1 - e), 0],
+    chest: [-0.055 - 0.02 * e, 0.06 * (1 - e), 0],
+    spine: [-0.02, 0.05 * (1 - e), 0],
+    shoulderL: [0, 0, 0.055 + br * 0.006],
+    shoulderR: [0, 0, -0.055 - br * 0.006],
+    root: { y: 0, ry: WEST_YAW * e },
+  };
+}
+
+// "He self-detonates, brazen." — the final breath: chin up to the heavens,
+// chest inflating, arms flung wide, a low crouch — while the body swings
+// back around to face his executioners. ryDelta is measured from whatever
+// yaw the previous motion left (poem → faces the crowd again).
+function animBrace(t) {
+  const e = easeOut(clamp01(t / 0.8));
+  return {
+    head: [-0.42 * e, 0, 0],
+    neck: [-0.2 * e, 0, 0],
+    chest: [-0.3 * e, 0, 0],
+    spine: [-0.17 * e, 0, 0],
+    shoulderL: [-0.22 * e, 0, 0.32 * e],
+    shoulderR: [-0.22 * e, 0, -0.32 * e],
+    elbowL: [-0.3 * e, 0, 0.14 * e],
+    elbowR: [-0.3 * e, 0, -0.14 * e],
+    wristL: [-0.5 * e, 0, 0.22 * e],
+    wristR: [-0.5 * e, 0, -0.22 * e],
+    hips: [0.1 * e, 0, 0],
+    root: { y: -0.09 * e, rx: 0.06 * e, ryDelta: 2.45 * e },
+  };
+}
+
+export const ANIMS = { idle: animIdle, walk: animWalk, death: animDeath, turn: animTurn, poem: animPoem, brace: animBrace };
 export const DEATH_DURATION = DEATH_DUR;
 
 /**
@@ -306,7 +379,15 @@ export function createAnimator(rig) {
   for (const b of rig.bones) cur[b.name] = [0, 0, 0];
   const orig = rig.skinned.userData.orig ||
     { position: rig.skinned.position.clone(), rotation: rig.skinned.rotation.clone() };
-  let rootY = 0, rootRZ = 0, rootRX = 0;
+  let rootY = 0, rootRZ = 0, rootRX = 0, rootRY = 0;
+  let ryBase = 0; // body yaw captured at start(), for ryDelta motions
+
+  const applyRoot = () => {
+    rig.skinned.position.y = orig.position.y + rootY;
+    rig.skinned.rotation.x = orig.rotation.x + rootRX;
+    rig.skinned.rotation.y = orig.rotation.y + rootRY;
+    rig.skinned.rotation.z = orig.rotation.z + rootRZ;
+  };
 
   return {
     state,
@@ -314,10 +395,25 @@ export function createAnimator(rig) {
       state.name = ANIMS[name] ? name : 'idle';
       state.t = 0;
       state.playing = true;
-      rootY = 0; rootRZ = 0; rootRX = 0;
-      for (const b of rig.bones) { b.rotation.set(0, 0, 0); cur[b.name] = [0, 0, 0]; }
-      rig.skinned.position.copy(orig.position);
-      rig.skinned.rotation.copy(orig.rotation);
+      ryBase = rootRY;
+      // Snap the figure to the motion's t=0 pose (no damped "whip" into it).
+      const p0 = ANIMS[state.name](0, rig.height);
+      for (const b of rig.bones) {
+        const tgt = p0[b.name] || ZERO;
+        b.rotation.set(tgt[0], tgt[1], tgt[2]);
+        cur[b.name] = [tgt[0], tgt[1], tgt[2]];
+      }
+      // Reset root offsets the motion owns; keep the ones it doesn't
+      // (a crouch doesn't cancel a death drop; brace continues a poem yaw).
+      const r0 = p0.root || {};
+      if (Math.abs(r0.y || 0) < 1e-3) rootY = 0;
+      if (Math.abs(r0.rz || 0) < 1e-3) rootRZ = 0;
+      if (Math.abs(r0.rx || 0) < 1e-3) rootRX = 0;
+      // Absolute-ry motions: snap on a large cut (back-turned turn),
+      // keep the current yaw on small continuity (poem after turn);
+      // ryDelta motions always continue from the current yaw.
+      if (r0.ry != null && Math.abs(r0.ry - rootRY) > 0.5) rootRY = r0.ry;
+      applyRoot();
     },
     tick(dt) {
       if (!state.playing) return;
@@ -332,17 +428,19 @@ export function createAnimator(rig) {
         c[2] = damp(c[2], tgt[2], dt);
         b.rotation.set(c[0], c[1], c[2]);
       }
-      if (pose.root) {
-        rootY = damp(rootY, pose.root.y, dt, 8);
-        rootRZ = damp(rootRZ, pose.root.rz || 0, dt, 8);
-        rootRX = damp(rootRX, pose.root.rx || 0, dt, 8);
-        rig.skinned.position.y = orig.position.y + rootY;
-        rig.skinned.rotation.z = orig.rotation.z + rootRZ;
-        rig.skinned.rotation.x = orig.rotation.x + rootRX;
+      const rt = pose.root;
+      if (rt) {
+        rootY = damp(rootY, rt.y, dt, 8);
+        rootRZ = damp(rootRZ, rt.rz || 0, dt, 8);
+        rootRX = damp(rootRX, rt.rx || 0, dt, 8);
+        const ryTgt = rt.ry != null ? rt.ry : (rt.ryDelta != null ? ryBase + rt.ryDelta : rootRY);
+        rootRY = damp(rootRY, ryTgt, dt, 8);
       } else {
-        rig.skinned.position.copy(orig.position);
-        rig.skinned.rotation.copy(orig.rotation);
+        rootY = damp(rootY, 0, dt, 6);
+        rootRZ = damp(rootRZ, 0, dt, 6);
+        rootRX = damp(rootRX, 0, dt, 6);
       }
+      applyRoot();
       if (state.name === 'death' && state.t > DEATH_DUR + 0.5) state.playing = false;
     },
   };

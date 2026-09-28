@@ -87,11 +87,19 @@ The Tripo GLBs are unrigged, so instead of paying an animation API we build the
 rig **in code at load time**: `world/js/animlab.js` derives a 17-bone skeleton
 from each model's own silhouette (arm chain is data-driven), computes
 per-vertex skin weights (Gaussian falloff, top-4 blend — handles the tattered
-robe), and drives it with three procedural motions: **idle / walk / death**
-(Chapter 1's execution tone). Full 4K Fang Yuan (130k verts) rigs in 0.3 s.
+robe), and drives it with procedural motions: **idle / walk / death / turn /
+poem / brace**. Full 4K Fang Yuan (130k verts) rigs in 0.3 s.
+
+**In the world (Chapter 1 done):** every swapped GLB auto-rigs to a live idle,
+and Chapter 1's beats play Fang Yuan's death from the text — idle on the
+summit → the slow whole-body turn (the host recoils a full pace) → the dying
+verse facing the setting sun → the self-detonation brace as the blast fires.
+Chapters 2–5 follow, one at a time.
 
 - Studio: `characters/viewer.html?m=fang_yuan` → **Idle / Walk / Death** buttons
+- In-world: the live preview, `?z=z1` — beats play themselves (← → to step)
 - Live demo: [animation/death_demo.gif](animation/death_demo.gif) — standing → stagger → head-down collapse, captured from the rig at 4K
+- Ch1 verification frames: [`animation/ch1/`](animation/ch1/)
 - Design notes + the four skinning gotchas we fixed: [`ANIMATION.md`](ANIMATION.md)
 
 ## Music credits (world/music/)

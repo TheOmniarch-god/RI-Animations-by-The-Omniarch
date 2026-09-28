@@ -35426,13 +35426,415 @@
     }
   }
 
+  // world/js/animlab.js
+  var BONE_SPEC = (H2, hands) => {
+    const shY = 0.82 * H2;
+    const hl = hands && hands.lx > 0.03 * H2 ? hands : { lx: 0.3 * H2, ly: 0.62 * H2, rx: -0.3 * H2, ry: 0.62 * H2 };
+    const sx = 0.45;
+    return [
+      // [name, parent, [x, y, z] (absolute, feet-based), influenceRadius]
+      ["hips", null, [0, 0.5 * H2, 0], 0.14 * H2],
+      ["spine", "hips", [0, 0.61 * H2, 0], 0.13 * H2],
+      ["chest", "spine", [0, 0.73 * H2, 0], 0.14 * H2],
+      ["neck", "chest", [0, 0.845 * H2, 0], 0.075 * H2],
+      ["head", "neck", [0, 0.93 * H2, 0], 0.1 * H2],
+      ["shoulderL", "chest", [sx * hl.lx, shY, 0], 0.115 * H2],
+      ["elbowL", "shoulderL", [sx * hl.lx + (hl.lx - sx * hl.lx) * 0.5, (shY + hl.ly) * 0.5, 0], 0.105 * H2],
+      ["wristL", "elbowL", [hl.lx, hl.ly, 0], 0.09 * H2],
+      ["shoulderR", "chest", [sx * hl.rx, shY, 0], 0.115 * H2],
+      ["elbowR", "shoulderR", [sx * hl.rx + (hl.rx - sx * hl.rx) * 0.5, (shY + hl.ry) * 0.5, 0], 0.105 * H2],
+      ["wristR", "elbowR", [hl.rx, hl.ry, 0], 0.09 * H2],
+      ["hipL", "hips", [0.09 * H2, 0.47 * H2, 0], 0.12 * H2],
+      ["kneeL", "hipL", [0.09 * H2, 0.25 * H2, 0], 0.11 * H2],
+      ["ankleL", "kneeL", [0.09 * H2, 0.05 * H2, 0], 0.085 * H2],
+      ["hipR", "hips", [-0.09 * H2, 0.47 * H2, 0], 0.12 * H2],
+      ["kneeR", "hipR", [-0.09 * H2, 0.25 * H2, 0], 0.11 * H2],
+      ["ankleR", "kneeR", [-0.09 * H2, 0.05 * H2, 0], 0.085 * H2]
+    ];
+  };
+  function segDistSq(px2, py2, pz2, ax, ay, az, bx, by, bz) {
+    const abx = bx - ax, aby = by - ay, abz = bz - az;
+    const apx = px2 - ax, apy = py2 - ay, apz = pz2 - az;
+    const t = Math.max(0, Math.min(1, (apx * abx + apy * aby + apz * abz) / Math.max(abx * abx + aby * aby + abz * abz, 1e-9)));
+    const dx = px2 - (ax + abx * t), dy = py2 - (ay + aby * t), dz = pz2 - (az + abz * t);
+    return dx * dx + dy * dy + dz * dz;
+  }
+  function mainMesh(root) {
+    let best = null, bestTris = 0;
+    root.traverse((o) => {
+      if (o.isMesh && o.geometry) {
+        const idx = o.geometry.index;
+        const tris = idx ? idx.count / 3 : o.geometry.attributes.position?.count / 3 || 0;
+        if (tris > bestTris) {
+          bestTris = tris;
+          best = o;
+        }
+      }
+    });
+    return best;
+  }
+  function autoRig(root) {
+    const mesh = mainMesh(root);
+    if (!mesh) return null;
+    const geom = mesh.geometry;
+    const pos = geom.attributes.position;
+    if (!pos || pos.count < 500) return null;
+    const box = new Box3().setFromBufferAttribute(pos);
+    const size = box.getSize(new Vector3());
+    const H2 = Math.max(size.y, 0.5);
+    const c0 = box.getCenter(new Vector3());
+    const feetY = box.min.y;
+    let lx = -Infinity, ly = 0, rx = Infinity, ry = 0;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i) - c0.x;
+      const y = pos.getY(i) - feetY;
+      if (y > 0.3 * H2 && y < 0.72 * H2) {
+        if (x > lx) {
+          lx = x;
+          ly = y;
+        }
+        if (x < rx) {
+          rx = x;
+          ry = y;
+        }
+      }
+    }
+    if (!isFinite(lx) || !isFinite(rx)) {
+      lx = 0.3 * H2;
+      rx = -0.3 * H2;
+      ly = ry = 0.62 * H2;
+    }
+    const spec = BONE_SPEC(H2, { lx, ly, rx, ry });
+    const bones = [], byName = {};
+    for (const [name, parent2, p, r] of spec) {
+      const b = new Bone();
+      b.name = name;
+      b.userData.radius = r;
+      b.userData.abs = new Vector3(p[0], p[1], p[2]);
+      bones.push(b);
+      byName[name] = b;
+    }
+    for (const [name, parent2, p, r] of spec) {
+      const b = byName[name];
+      if (parent2) {
+        const pa = byName[parent2].userData.abs;
+        b.position.set(p[0] - pa.x, p[1] - pa.y, p[2] - pa.z);
+      } else {
+        b.position.set(p[0] + c0.x, p[1] + feetY, p[2] + c0.z);
+      }
+    }
+    for (const [name, parent2] of spec) {
+      if (parent2) byName[parent2].add(byName[name]);
+    }
+    const segs = spec.map(([name, parent2, p, r]) => ({
+      name,
+      a: parent2 ? byName[parent2].userData.abs : new Vector3(p[0], p[1], p[2]),
+      b: new Vector3(p[0], p[1], p[2]),
+      r
+    }));
+    const n = pos.count;
+    const skinIdx = new Uint16Array(n * 4);
+    const skinWt = new Float32Array(n * 4);
+    const sigma2 = segs.map((g) => g.r * 2 * (g.r * 2));
+    for (let i = 0; i < n; i++) {
+      const px2 = pos.getX(i) - c0.x, py2 = pos.getY(i) - feetY, pz2 = pos.getZ(i) - c0.z;
+      const scores = new Float32Array(spec.length);
+      let bs = 0, best = 0, nearest = 0, nd2 = Infinity;
+      for (let s = 0; s < spec.length; s++) {
+        const g = segs[s];
+        const d2 = segDistSq(px2, py2, pz2, g.a.x, g.a.y, g.a.z, g.b.x, g.b.y, g.b.z);
+        if (d2 < nd2) {
+          nd2 = d2;
+          nearest = s;
+        }
+        scores[s] = Math.exp(-d2 / sigma2[s]);
+        bs += scores[s];
+        if (scores[s] > scores[best]) best = s;
+      }
+      if (bs < 1e-6) {
+        skinIdx[i * 4] = nearest;
+        skinWt[i * 4] = 1;
+        continue;
+      }
+      const order = spec.map((_, s) => s).sort((u, v) => scores[v] - scores[u]).slice(0, 4);
+      const sum = order.reduce((a, s) => a + scores[s], 0);
+      for (let k = 0; k < 4; k++) {
+        const s = order[k];
+        skinIdx[i * 4 + k] = s;
+        skinWt[i * 4 + k] = scores[s] / sum;
+      }
+    }
+    geom.setAttribute("skinIndex", new Uint16BufferAttribute(skinIdx, 4));
+    geom.setAttribute("skinWeight", new Float32BufferAttribute(skinWt, 4));
+    const skinned = new SkinnedMesh(geom, mesh.material);
+    skinned.castShadow = mesh.castShadow;
+    skinned.receiveShadow = mesh.receiveShadow;
+    skinned.name = (mesh.name || "mesh") + "_skinned";
+    skinned.position.copy(mesh.position);
+    skinned.quaternion.copy(mesh.quaternion);
+    skinned.scale.copy(mesh.scale);
+    skinned.userData.orig = {
+      position: skinned.position.clone(),
+      rotation: skinned.rotation.clone()
+    };
+    skinned.add(byName["hips"]);
+    const parent = mesh.parent;
+    if (parent) {
+      parent.remove(mesh);
+      parent.add(skinned);
+    } else root.add(skinned);
+    root.updateWorldMatrix(true, true);
+    skinned.updateMatrixWorld(true);
+    skinned.bind(new Skeleton(bones));
+    return { bones, byName, skinned, height: H2 };
+  }
+  var ZERO = [0, 0, 0];
+  var clamp01 = (v) => Math.max(0, Math.min(1, v));
+  var easeInOut = (v) => v * v * (3 - 2 * v);
+  var easeOut = (v) => 1 - (1 - v) * (1 - v);
+  function animIdle(t) {
+    const br = Math.sin(t * 1.7);
+    return {
+      chest: [br * 0.035, 0, 0],
+      neck: [br * 0.02, Math.sin(t * 0.6) * 0.03, 0],
+      head: [br * 0.015, Math.sin(t * 0.45) * 0.05, Math.sin(t * 0.3) * 0.02],
+      shoulderL: [0, 0, 0.06 + br * 0.01],
+      shoulderR: [0, 0, -0.06 - br * 0.01],
+      wristL: [0, 0, 0.03],
+      wristR: [0, 0, -0.03],
+      hips: [0, Math.sin(t * 0.5) * 0.015, 0]
+    };
+  }
+  function animWalk(t, H2) {
+    const ph = t * 7.2;
+    const s = Math.sin(ph), c = Math.cos(ph);
+    return {
+      hipL: [s * 0.55, 0, 0.03],
+      hipR: [-s * 0.55, 0, -0.03],
+      kneeL: [Math.max(0, -s) * 0.75 + 0.05, 0, 0],
+      kneeR: [Math.max(0, s) * 0.75 + 0.05, 0, 0],
+      ankleL: [-Math.max(0, -s) * 0.35 + c * 0.08, 0, 0],
+      ankleR: [-Math.max(0, s) * 0.35 - c * 0.08, 0, 0],
+      shoulderL: [-s * 0.42, 0, 0.08],
+      shoulderR: [s * 0.42, 0, -0.08],
+      elbowL: [-0.35, 0, 0],
+      elbowR: [-0.35, 0, 0],
+      chest: [0.04, s * 0.05, 0],
+      head: [-s * 0.03, -s * 0.04, 0],
+      spine: [0.02, 0, 0],
+      hips: [0, 0, s * 0.035],
+      root: { y: Math.abs(c) * 0.012 * H2, rz: 0 }
+    };
+  }
+  var DEATH_KEYS = [
+    { t: 0, p: {
+      head: [0.1, 0.15, 0],
+      chest: [0.05, 0.08, 0],
+      shoulderL: [0.25, 0, 0.35],
+      shoulderR: [0.25, 0, -0.35],
+      wristL: [-0.4, 0, 0.2],
+      wristR: [-0.4, 0, -0.2],
+      kneeL: [0.15, 0, 0],
+      kneeR: [0.1, 0, 0]
+    } },
+    { t: 0.35, p: {
+      head: [0.5, 0.1, 0.05],
+      chest: [0.2, 0.05, 0],
+      spine: [0.15, 0, 0],
+      shoulderL: [-0.4, 0, 0.6],
+      shoulderR: [-0.3, 0, -0.5],
+      wristL: [-0.9, 0, 0.3],
+      wristR: [-0.7, 0, -0.3],
+      hipL: [0.35, 0, 0.05],
+      hipR: [0.2, 0, -0.05],
+      kneeL: [0.7, 0, 0],
+      kneeR: [0.5, 0, 0]
+    } },
+    { t: 0.8, p: {
+      head: [0.75, 0, 0.15],
+      neck: [0.5, 0, 0.05],
+      chest: [0.85, 0, 0.1],
+      spine: [0.7, 0, 0.15],
+      shoulderL: [-1.1, 0, 1],
+      shoulderR: [-0.9, 0, -0.9],
+      elbowL: [-0.5, 0, 0.2],
+      elbowR: [-0.4, 0, -0.2],
+      wristL: [-1.2, 0, 0.4],
+      wristR: [-1, 0, -0.4],
+      hipL: [0.9, 0, 0.1],
+      hipR: [0.6, 0, -0.1],
+      kneeL: [1.1, 0, 0],
+      kneeR: [0.8, 0, 0],
+      ankleL: [-0.6, 0, 0],
+      ankleR: [-0.4, 0, 0]
+    } },
+    { t: 1.3, p: {
+      head: [1.05, 0, 0.2],
+      neck: [0.6, 0, 0.1],
+      chest: [1.15, 0, 0.25],
+      spine: [0.95, 0, 0.3],
+      shoulderL: [-1.35, 0, 1.25],
+      shoulderR: [-1.2, 0, -1.2],
+      elbowL: [-0.6, 0, 0.3],
+      elbowR: [-0.55, 0, -0.3],
+      wristL: [-1.5, 0, 0.5],
+      wristR: [-1.4, 0, -0.5],
+      hipL: [1.05, 0, 0.12],
+      hipR: [0.75, 0, -0.08],
+      kneeL: [1.2, 0, 0.05],
+      kneeR: [0.9, 0, -0.05],
+      ankleL: [-0.7, 0, 0],
+      ankleR: [-0.55, 0, 0]
+    } }
+  ];
+  var DEATH_DUR = 2.6;
+  function animDeath(t, H2) {
+    const k = Math.min(t / DEATH_DUR, 1);
+    let a = DEATH_KEYS[0], b = DEATH_KEYS[DEATH_KEYS.length - 1];
+    for (let i = 0; i < DEATH_KEYS.length - 1; i++) {
+      if (k >= DEATH_KEYS[i].t && k <= DEATH_KEYS[i + 1].t) {
+        a = DEATH_KEYS[i];
+        b = DEATH_KEYS[i + 1];
+        break;
+      }
+    }
+    let u = (k - a.t) / Math.max(b.t - a.t, 1e-6);
+    u = u * u * (3 - 2 * u);
+    const out = {};
+    const names = /* @__PURE__ */ new Set([...Object.keys(a.p), ...Object.keys(b.p)]);
+    for (const nm of names) {
+      const pa = a.p[nm] || ZERO, pb = b.p[nm] || ZERO;
+      out[nm] = [pa[0] + (pb[0] - pa[0]) * u, pa[1] + (pb[1] - pa[1]) * u, pa[2] + (pb[2] - pa[2]) * u];
+    }
+    const fall = k < 0.25 ? 0 : Math.min(1, (k - 0.25) / 0.55);
+    const fe = fall * fall;
+    out.root = { y: -fe * 0.42 * H2, rz: fe * 0.12, rx: fe * 0.18 };
+    return out;
+  }
+  var TURN_FROM = 3.32;
+  var TURN_TO = 0.15;
+  var TURN_HOLD = 0.8;
+  var TURN_DUR = 2.6;
+  var TURN_END = TURN_HOLD + TURN_DUR;
+  function animTurn(t) {
+    const u = clamp01((t - TURN_HOLD) / TURN_DUR);
+    const e = easeInOut(u);
+    const br = Math.sin(t * 1.3);
+    const lead = Math.sin(u * Math.PI) * 0.3;
+    return {
+      head: [0.03 + br * 0.01, lead, 0.02 * Math.sin(u * Math.PI)],
+      neck: [0.015, lead * 0.5, 0],
+      chest: [0.02 + br * 8e-3, e * 0.05, 0],
+      spine: [0.015, e * 0.04, 0],
+      shoulderL: [0, 0, 0.06],
+      shoulderR: [0, 0, -0.06],
+      root: { y: 0, ry: TURN_FROM + (TURN_TO - TURN_FROM) * e }
+    };
+  }
+  var WEST_YAW = -2.32;
+  function animPoem(t) {
+    const e = easeInOut(clamp01(t / 2.6));
+    const br = Math.sin(t * 1.05);
+    return {
+      head: [-0.07 + br * 8e-3, 0.08 * (1 - e), 0.02],
+      neck: [-0.035, 0.05 * (1 - e), 0],
+      chest: [-0.055 - 0.02 * e, 0.06 * (1 - e), 0],
+      spine: [-0.02, 0.05 * (1 - e), 0],
+      shoulderL: [0, 0, 0.055 + br * 6e-3],
+      shoulderR: [0, 0, -0.055 - br * 6e-3],
+      root: { y: 0, ry: WEST_YAW * e }
+    };
+  }
+  function animBrace(t) {
+    const e = easeOut(clamp01(t / 0.8));
+    return {
+      head: [-0.42 * e, 0, 0],
+      neck: [-0.2 * e, 0, 0],
+      chest: [-0.3 * e, 0, 0],
+      spine: [-0.17 * e, 0, 0],
+      shoulderL: [-0.22 * e, 0, 0.32 * e],
+      shoulderR: [-0.22 * e, 0, -0.32 * e],
+      elbowL: [-0.3 * e, 0, 0.14 * e],
+      elbowR: [-0.3 * e, 0, -0.14 * e],
+      wristL: [-0.5 * e, 0, 0.22 * e],
+      wristR: [-0.5 * e, 0, -0.22 * e],
+      hips: [0.1 * e, 0, 0],
+      root: { y: -0.09 * e, rx: 0.06 * e, ryDelta: 2.45 * e }
+    };
+  }
+  var ANIMS = { idle: animIdle, walk: animWalk, death: animDeath, turn: animTurn, poem: animPoem, brace: animBrace };
+  function createAnimator(rig2) {
+    const damp3 = (cur2, tgt, dt, k = 10) => cur2 + (tgt - cur2) * Math.min(1, dt * k);
+    const state2 = { name: "idle", t: 0, playing: true };
+    const cur = {};
+    for (const b of rig2.bones) cur[b.name] = [0, 0, 0];
+    const orig = rig2.skinned.userData.orig || { position: rig2.skinned.position.clone(), rotation: rig2.skinned.rotation.clone() };
+    let rootY = 0, rootRZ = 0, rootRX = 0, rootRY = 0;
+    let ryBase = 0;
+    const applyRoot = () => {
+      rig2.skinned.position.y = orig.position.y + rootY;
+      rig2.skinned.rotation.x = orig.rotation.x + rootRX;
+      rig2.skinned.rotation.y = orig.rotation.y + rootRY;
+      rig2.skinned.rotation.z = orig.rotation.z + rootRZ;
+    };
+    return {
+      state: state2,
+      start(name) {
+        state2.name = ANIMS[name] ? name : "idle";
+        state2.t = 0;
+        state2.playing = true;
+        ryBase = rootRY;
+        const p0 = ANIMS[state2.name](0, rig2.height);
+        for (const b of rig2.bones) {
+          const tgt = p0[b.name] || ZERO;
+          b.rotation.set(tgt[0], tgt[1], tgt[2]);
+          cur[b.name] = [tgt[0], tgt[1], tgt[2]];
+        }
+        const r0 = p0.root || {};
+        if (Math.abs(r0.y || 0) < 1e-3) rootY = 0;
+        if (Math.abs(r0.rz || 0) < 1e-3) rootRZ = 0;
+        if (Math.abs(r0.rx || 0) < 1e-3) rootRX = 0;
+        if (r0.ry != null && Math.abs(r0.ry - rootRY) > 0.5) rootRY = r0.ry;
+        applyRoot();
+      },
+      tick(dt) {
+        if (!state2.playing) return;
+        state2.t += dt;
+        const H2 = rig2.height;
+        const pose = ANIMS[state2.name](state2.t, H2);
+        for (const b of rig2.bones) {
+          const tgt = pose[b.name] || ZERO;
+          const c = cur[b.name];
+          c[0] = damp3(c[0], tgt[0], dt);
+          c[1] = damp3(c[1], tgt[1], dt);
+          c[2] = damp3(c[2], tgt[2], dt);
+          b.rotation.set(c[0], c[1], c[2]);
+        }
+        const rt = pose.root;
+        if (rt) {
+          rootY = damp3(rootY, rt.y, dt, 8);
+          rootRZ = damp3(rootRZ, rt.rz || 0, dt, 8);
+          rootRX = damp3(rootRX, rt.rx || 0, dt, 8);
+          const ryTgt = rt.ry != null ? rt.ry : rt.ryDelta != null ? ryBase + rt.ryDelta : rootRY;
+          rootRY = damp3(rootRY, ryTgt, dt, 8);
+        } else {
+          rootY = damp3(rootY, 0, dt, 6);
+          rootRZ = damp3(rootRZ, 0, dt, 6);
+          rootRX = damp3(rootRX, 0, dt, 6);
+        }
+        applyRoot();
+        if (state2.name === "death" && state2.t > DEATH_DUR + 0.5) state2.playing = false;
+      }
+    };
+  }
+
   // world/js/charassets.js
-  var CHAR_URLS = {
+  var CHAR_URLS = Object.assign({
     fang_yuan: "characters/fang_yuan.glb",
     fang_zheng: "characters/fang_zheng.glb",
     shen_cui: "characters/shen_cui.glb",
     gu_yue_elder: "characters/gu_yue_elder.glb"
-  };
+  }, typeof window !== "undefined" && window.__charUrls || {});
   var CharStore = class {
     constructor() {
       this.loader = new GLTFLoader();
@@ -35482,6 +35884,7 @@
     /** replace the procedural contents of record.group with the GLB (fitted) */
     _swap(record, asset, id) {
       const g = record.group;
+      if (g.userData.noGLB) return;
       if (g.children.some((c) => c.userData.riGlbRoot)) return;
       g.updateWorldMatrix(true, false);
       const pb = new Box3().setFromObject(g);
@@ -35518,6 +35921,18 @@
         const clip = asset.anims.find((a) => /idle|stand/i.test(a.name)) || asset.anims[0];
         mixer.clipAction(clip).play();
         record.mixer = mixer;
+      }
+      try {
+        g.updateWorldMatrix(true, false);
+        const rig2 = autoRig(inst);
+        if (rig2) {
+          const animator = createAnimator(rig2);
+          animator.start("idle");
+          record.rig = rig2;
+          record.animator = animator;
+        }
+      } catch (e) {
+        console.warn(`[charassets] ${id}: auto-rig failed \u2014 static GLB stays. ${e.message}`);
       }
       record.isGLB = true;
       record._lt = 0;
@@ -36517,10 +36932,9 @@
   }
   function animateFigure(fig, t) {
     if (fig.isGLB) {
-      if (fig.mixer) {
-        const dt = Math.min(0.1, Math.max(0, t - (fig._lt || 0)));
-        fig.mixer.update(dt);
-      }
+      const dt = Math.min(0.1, Math.max(0, t - (fig._lt || 0)));
+      if (fig.mixer) fig.mixer.update(dt);
+      if (fig.animator) fig.animator.tick(dt);
       fig._lt = t;
       return;
     }
@@ -37330,6 +37744,7 @@
       refs.eldersInside = [];
       for (let i = 0; i < 5; i++) {
         const e = makeElder(15131092, 9187110);
+        e.group.userData.noGLB = true;
         e.group.scale.setScalar(0.85);
         const ex = hx + Math.cos(i * 1.2) * 2.4, ez = hz + Math.sin(i * 1.2) * 2.4;
         e.group.position.set(ex, VILL_H(ex, ez) + 0.8, ez);
@@ -37357,7 +37772,7 @@
         B(
           "\u9752\u8305\u5C71 \xB7 Summit of Qing Mao Mountain",
           `<b>\u201CFang Yuan! Hand over the Spring Autumn Cicada without struggle, and I shall grant you a quick death!\u201D</b>
-         <span class="stage">Tattered emerald robe, hair wild, body bathed in blood \u2014 every path to life has been severed. The trap has snapped shut; on this day, death is absolute.</span>`,
+         <span class="stage">Tattered dark robe, hair wild, body bathed in blood \u2014 every path to life has been severed. The trap has snapped shut; on this day, death is absolute.</span>`,
           { pos: [15.5, 7.2, 19.5], look: [0, 2.2, 0], fov: 52 },
           {
             top: 2763349,
@@ -37384,6 +37799,10 @@
           },
           {
             auto: 13,
+            onEnter: (z) => {
+              const a = z.refs.fy.animator;
+              if (a) a.start("idle");
+            },
             labels: [
               { text: "Gu Yue Fang Yuan", sub: "Old Demon Fang \xB7 five centuries of carnage", pos: [0, 3.6, 0] },
               { text: "The Righteous Host", sub: "sect leaders & young heroes, united as one", pos: [0, 4.5, -15] }
@@ -37395,7 +37814,7 @@
         B(
           "\u50F5\u6301 \xB7 Six hours slip into eternity",
           `<b>His eyes were abyssal, like an ancient well \u2014 unfathomably deep, without shore and without bottom.</b>
-         <span class="stage">None of them dare make a move; every soul trembles before the final, dying wrath of Old Demon Fang. One slow turn of his head \u2014 and the multitude recoils a full pace in panic.</span>`,
+         <span class="stage">None of them dare make a move; every soul trembles before the final, dying wrath of Old Demon Fang. He stood as motionless as a statue \u2014 then slowly turned around. That solitary motion sent a convulsion through the host: the multitude recoiled in unison, a full pace in panic.</span>`,
           { pos: [7.2, 4.6, 9.4], look: [0, 2.35, 0], fov: 42 },
           {
             top: 2302793,
@@ -37422,6 +37841,10 @@
           },
           {
             auto: 12,
+            onEnter: (z) => {
+              const a = z.refs.fy.animator;
+              if (a) a.start("turn");
+            },
             labels: [
               { text: "Blood on grey-white stone", sub: "the mountain rocks dyed dark red", pos: [2.5, 2.4, 2.5], cls: "wl-red" }
             ],
@@ -37460,6 +37883,10 @@
           },
           {
             auto: 14,
+            onEnter: (z) => {
+              const a = z.refs.fy.animator;
+              if (a) a.start("poem");
+            },
             labels: [
               { text: "The western ridge", sub: "sun sinks \u2014 clouds set ablaze", pos: [-70, 18, -22] }
             ],
@@ -37501,6 +37928,8 @@
             onEnter: (z, c) => {
               const r = z.refs;
               r.explodeT = 0;
+              const a = r.fy.animator;
+              if (a) a.start("brace");
               c.hud.flashFx(1, 110, 1400);
               c.rig.shake(1.5, 2);
               c.audio.sfx("boom");
@@ -37592,7 +38021,7 @@
       ];
     },
     /* ---------------- per-frame ---------------- */
-    update(ctx2, t, dt, beat) {
+    update(ctx2, t, dt, beat, beatT) {
       const r = this.refs;
       if (!r) return;
       animateFigure(r.fy, t);
@@ -37622,6 +38051,34 @@
             f.position.set(f.userData._bx, f.userData._by, f.userData._bz);
             f.rotation.x = 0;
             f.rotation.z = 0;
+          }
+        });
+      }
+      const allFig = [...r.heroes.map((h) => h.group), ...r.host];
+      if (beat === 1 && beatT != null && beatT > TURN_END) {
+        const k = 1 - Math.pow(1 - Math.min(1, (beatT - TURN_END) / 1.1), 2);
+        allFig.forEach((f, i) => {
+          if (f.userData._rx == null) {
+            f.userData._rx = f.position.x;
+            f.userData._ry = f.position.y;
+            f.userData._rz = f.position.z;
+            f.userData._rjx = f.rotation.x;
+            f.userData._rjy = f.rotation.y;
+          }
+          const len = Math.hypot(f.userData._rx, f.userData._rz) || 1;
+          const wob = 1 + i % 5 * 0.15;
+          f.position.x = f.userData._rx + f.userData._rx / len * k * 1.1 * wob;
+          f.position.z = f.userData._rz + f.userData._rz / len * k * 1.1 * wob;
+          f.position.y = f.userData._ry + k * k * 0.25;
+          f.rotation.x = f.userData._rjx + k * 0.35;
+          f.rotation.y = f.userData._rjy + k * 0.2 * (i % 2 ? 1 : -1);
+        });
+      } else if (beat !== 1) {
+        allFig.forEach((f) => {
+          if (f.userData._rx != null) {
+            f.position.set(f.userData._rx, f.userData._ry, f.userData._rz);
+            f.rotation.x = f.userData._rjx;
+            f.rotation.y = f.userData._rjy;
           }
         });
       }
